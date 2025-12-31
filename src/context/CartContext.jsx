@@ -70,7 +70,9 @@ export const CartProvider = ({ children }) => {
     const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
     const cartTotal = cartItems.reduce((acc, item) => {
         // Assuming price is a string like "$89", we need to parse it
-        const price = parseFloat(item.price.replace(/[^0-9.]/g, ''));
+        const price = typeof item.price === 'string'
+            ? parseFloat(item.price.replace(/[^0-9.]/g, ''))
+            : Number(item.price);
         return acc + price * item.quantity;
     }, 0);
 

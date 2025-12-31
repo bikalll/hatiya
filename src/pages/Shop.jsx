@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import ProductModal from '../components/ProductModal';
+
 
 import { supabase } from '../lib/supabaseClient';
 
@@ -11,7 +13,15 @@ const Shop = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [activeCategory, setActiveCategory] = useState('All');
     const [sortBy, setSortBy] = useState('popular');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
     const { addToCart } = useCart();
+
+    // Modal State
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState(['All']);
     const [isLoading, setIsLoading] = useState(true);
@@ -58,8 +68,22 @@ const Shop = () => {
             product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             product.category.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return matchesCategory && matchesSearch;
+        const price = parseFloat(product.price);
+        const matchesMinPrice = minPrice === '' || price >= parseFloat(minPrice);
+        const matchesMaxPrice = maxPrice === '' || price <= parseFloat(maxPrice);
+
+        return matchesCategory && matchesSearch && matchesMinPrice && matchesMaxPrice;
+    }).sort((a, b) => {
+        if (sortBy === 'price-low') {
+            return parseFloat(a.price) - parseFloat(b.price);
+        } else if (sortBy === 'price-high') {
+            return parseFloat(b.price) - parseFloat(a.price);
+        } else if (sortBy === 'newest') {
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+        return 0; // Default (Popular) - usually implies no specific sort or server default
     });
+
 
     const styles = {
         page: {
@@ -251,6 +275,28 @@ const Shop = () => {
                             ))}
                         </div>
                     </div>
+
+                    <div style={styles.sidebarSection}>
+                        <h3 style={styles.sidebarTitle}>Price Range</h3>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                                type="number"
+                                placeholder="Min"
+                                value={minPrice}
+                                onChange={(e) => setMinPrice(e.target.value)}
+                                style={{ ...styles.sortSelect, width: '70px' }}
+                            />
+                            <span style={{ color: '#6B7280' }}>-</span>
+                            <input
+                                type="number"
+                                placeholder="Max"
+                                value={maxPrice}
+                                onChange={(e) => setMaxPrice(e.target.value)}
+                                style={{ ...styles.sortSelect, width: '70px' }}
+                            />
+                        </div>
+                    </div>
+
                 </aside>
 
                 <main style={styles.mainContent}>
@@ -278,7 +324,13 @@ const Shop = () => {
                         ) : (
                             filteredProducts.map((product) => (
                                 <div key={product.id} style={styles.productCard}>
-                                    <div style={styles.productImageContainer}>
+                                    <div
+                                        style={{ ...styles.productImageContainer, cursor: 'pointer' }}
+                                        onClick={() => {
+                                            setSelectedProduct(product);
+                                            setIsModalOpen(true);
+                                        }}
+                                    >
                                         <img src={product.image_url} alt={product.name} style={styles.productImage} />
                                         {product.badge && <span style={styles.badge}>{product.badge}</span>}
                                     </div>
@@ -287,9 +339,9 @@ const Shop = () => {
                                         <div style={styles.productName}>{product.name}</div>
                                         <div style={styles.productPriceRow}>
                                             <div>
-                                                <span style={styles.productPrice}>${product.price}</span>
+                                                <span style={styles.productPrice}>NPR {product.price}</span>
                                                 {product.original_price && (
-                                                    <span style={styles.originalPrice}>${product.original_price}</span>
+                                                    <span style={styles.originalPrice}>NPR {product.original_price}</span>
                                                 )}
                                             </div>
                                             <button
@@ -306,8 +358,16 @@ const Shop = () => {
                     </div>
                 </main>
             </section>
+
+            <ProductModal
+                product={selectedProduct}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onAddToCart={addToCart}
+            />
         </div>
     );
 };
+
 
 export default Shop;

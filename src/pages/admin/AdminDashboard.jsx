@@ -10,8 +10,14 @@ const AdminDashboard = () => {
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
-    const [view, setView] = useState('list'); // 'list', 'add', 'categories', 'add-category'
+    const [view, setView] = useState('list'); // 'list', 'add', 'categories', 'add-category', 'faqs', 'add-faq'
     const [imageFile, setImageFile] = useState(null);
+    const [faqs, setFaqs] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [editingId, setEditingId] = useState(null);
+
+
 
     // Form state
     const [formData, setFormData] = useState({
@@ -20,13 +26,30 @@ const AdminDashboard = () => {
         price: '',
         description: '',
         stock_quantity: 10,
-        is_featured: false
+        is_featured: false,
+        sku: '',
+        material: '',
+        dimensions: ''
     });
+
 
     const [categoryForm, setCategoryForm] = useState({
         name: '',
         description: ''
     });
+
+    const [faqForm, setFaqForm] = useState({
+        question: '',
+        answer: ''
+    });
+
+    const [notificationForm, setNotificationForm] = useState({
+        title: '',
+        message: '',
+        type: 'general', // general, payment, opening
+        user_id: '' // empty = all users
+    });
+
 
     useEffect(() => {
         if (!user) {
@@ -38,9 +61,38 @@ const AdminDashboard = () => {
 
     const fetchData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchProducts(), fetchCategories()]);
+        await Promise.all([fetchProducts(), fetchCategories(), fetchFaqs(), fetchOrders(), fetchNotifications()]);
         setIsLoading(false);
     };
+
+    const fetchNotifications = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setNotifications(data || []);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        }
+    };
+
+    const fetchOrders = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setOrders(data || []);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+        }
+    };
+
+
 
     const fetchProducts = async () => {
         try {
@@ -74,6 +126,21 @@ const AdminDashboard = () => {
         }
     };
 
+    const fetchFaqs = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('faqs')
+                .select('*')
+                .order('created_at');
+
+            if (error) throw error;
+            setFaqs(data || []);
+        } catch (error) {
+            console.error('Error fetching FAQs:', error);
+        }
+    };
+
+
     const handleSignOut = async () => {
         await signOut();
         navigate('/admin');
@@ -86,6 +153,15 @@ const AdminDashboard = () => {
     const handleCategoryChange = (e) => {
         setCategoryForm({ ...categoryForm, [e.target.name]: e.target.value });
     };
+
+    const handleFaqChange = (e) => {
+        setFaqForm({ ...faqForm, [e.target.name]: e.target.value });
+    };
+
+    const handleNotificationChange = (e) => {
+        setNotificationForm({ ...notificationForm, [e.target.name]: e.target.value });
+    };
+
 
     const handleImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -113,7 +189,44 @@ const AdminDashboard = () => {
         return data.publicUrl;
     };
 
+    const handleEditProduct = (product) => {
+        setFormData({
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            description: product.description || '',
+            stock_quantity: product.stock_quantity,
+            is_featured: product.is_featured,
+            sku: product.sku || '',
+            material: product.material || '',
+            dimensions: product.dimensions || ''
+        });
+        setEditingId(product.id);
+        setView('add');
+    };
+
+    const handleEditCategory = (category) => {
+        setCategoryForm({
+            name: category.name,
+            description: category.description || ''
+        });
+        setEditingId(category.id);
+        setView('add-category');
+    };
+
+    const handleEditFaq = (faq) => {
+        setFaqForm({
+            question: faq.question,
+            answer: faq.answer
+        });
+        setEditingId(faq.id);
+        setView('add-faq');
+    };
+
+    // --- Submit Handlers with Edit Logic ---
+
     const handleSubmit = async (e) => {
+
         e.preventDefault();
         setIsUploading(true);
         try {
@@ -121,26 +234,44 @@ const AdminDashboard = () => {
 
             if (imageFile) {
                 image_url = await uploadImage(imageFile);
-            } else {
-                throw new Error('Please select an image');
             }
 
-            const { error } = await supabase
-                .from('products')
-                .insert([{ ...formData, image_url }]);
+            const productData = { ...formData };
+            if (image_url) productData.image_url = image_url;
 
-            if (error) throw error;
+            if (editingId) {
+                // Update
+                const { error } = await supabase
+                    .from('products')
+                    .update(productData)
+                    .eq('id', editingId);
+                if (error) throw error;
+                alert('Product updated successfully!');
+            } else {
+                if (!imageFile) throw new Error('Please select an image');
+                // Create
+                const { error } = await supabase
+                    .from('products')
+                    .insert([{ ...productData, image_url }]); // ensure image_url is set for new
+                if (error) throw error;
+                alert('Product added successfully!');
+            }
 
-            alert('Product added successfully!');
             setView('list');
+            setEditingId(null);
             setFormData({
+
                 name: '',
                 category: categories[0]?.name || '',
                 price: '',
                 description: '',
                 stock_quantity: 10,
-                is_featured: false
+                is_featured: false,
+                sku: '',
+                material: '',
+                dimensions: ''
             });
+
             setImageFile(null);
             fetchProducts();
         } catch (error) {
@@ -154,18 +285,77 @@ const AdminDashboard = () => {
         e.preventDefault();
         try {
             const slug = categoryForm.name.toLowerCase().replace(/\s+/g, '-');
-            const { error } = await supabase
-                .from('categories')
-                .insert([{ ...categoryForm, slug }]);
 
-            if (error) throw error;
+            if (editingId) {
+                const { error } = await supabase
+                    .from('categories')
+                    .update({ ...categoryForm, slug })
+                    .eq('id', editingId);
+                if (error) throw error;
+                alert('Category updated successfully!');
+            } else {
+                const { error } = await supabase
+                    .from('categories')
+                    .insert([{ ...categoryForm, slug }]);
+                if (error) throw error;
+                alert('Category added successfully!');
+            }
 
-            alert('Category added successfully!');
             setView('categories');
+            setEditingId(null);
             setCategoryForm({ name: '', description: '' });
             fetchCategories();
         } catch (error) {
-            alert('Error adding category: ' + error.message);
+            alert('Error adding/updating category: ' + error.message);
+        }
+    };
+
+
+    const handleSubmitFaq = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingId) {
+                const { error } = await supabase
+                    .from('faqs')
+                    .update(faqForm)
+                    .eq('id', editingId);
+                if (error) throw error;
+                alert('FAQ updated successfully!');
+            } else {
+                const { error } = await supabase
+                    .from('faqs')
+                    .insert([faqForm]);
+                if (error) throw error;
+                alert('FAQ added successfully!');
+            }
+
+            setView('faqs');
+            setEditingId(null);
+            setFaqForm({ question: '', answer: '' });
+            fetchFaqs();
+        } catch (error) {
+            alert('Error adding/updating FAQ: ' + error.message);
+        }
+    };
+
+    const handleSendNotification = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                title: notificationForm.title,
+                message: notificationForm.message,
+                type: notificationForm.type,
+                user_id: notificationForm.user_id.trim() === '' ? null : notificationForm.user_id
+            };
+
+            const { error } = await supabase.from('notifications').insert([payload]);
+            if (error) throw error;
+
+            alert('Notification sent!');
+            setNotificationForm({ title: '', message: '', type: 'general', user_id: '' });
+            fetchNotifications();
+        } catch (error) {
+            alert('Error sending notification: ' + error.message);
         }
     };
 
@@ -185,8 +375,10 @@ const AdminDashboard = () => {
         }
     };
 
+
     const handleDeleteCategory = async (id) => {
         if (!window.confirm('Are you sure? This might affect products using this category.')) return;
+
 
         try {
             const { error } = await supabase
@@ -200,6 +392,23 @@ const AdminDashboard = () => {
             alert('Error deleting category');
         }
     };
+
+    const handleDeleteFaq = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this FAQ?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('faqs')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchFaqs();
+        } catch (error) {
+            alert('Error deleting FAQ');
+        }
+    };
+
 
     const styles = {
         layout: {
@@ -347,8 +556,28 @@ const AdminDashboard = () => {
                 >
                     Categories
                 </button>
+                <button
+                    style={{ ...styles.navItem, ...(view === 'faqs' || view === 'add-faq' ? styles.navItemActive : {}) }}
+                    onClick={() => setView('faqs')}
+                >
+                    FAQs
+                </button>
+                <button
+                    style={{ ...styles.navItem, ...(view === 'sales' ? styles.navItemActive : {}) }}
+                    onClick={() => setView('sales')}
+                >
+                    Sales
+                </button>
+                <button
+                    style={{ ...styles.navItem, ...(view === 'notifications' ? styles.navItemActive : {}) }}
+                    onClick={() => setView('notifications')}
+                >
+                    Notifications
+                </button>
                 <div style={{ flex: 1 }}></div>
+
                 <button style={styles.navItem} onClick={handleSignOut}>
+
                     Sign Out
                 </button>
             </aside>
@@ -357,21 +586,46 @@ const AdminDashboard = () => {
                 <div style={styles.header}>
                     <h1 style={styles.title}>
                         {view === 'list' && 'Products'}
-                        {view === 'add' && 'Add Product'}
+                        {view === 'add' && (editingId ? 'Edit Product' : 'Add Product')}
                         {view === 'categories' && 'Categories'}
-                        {view === 'add-category' && 'Add Category'}
+                        {view === 'add-category' && (editingId ? 'Edit Category' : 'Add Category')}
+                        {view === 'faqs' && 'FAQs'}
+                        {view === 'add-faq' && (editingId ? 'Edit FAQ' : 'Add FAQ')}
+                        {view === 'sales' && 'Sales Orders'}
+                        {view === 'notifications' && 'Send Notifications'}
                     </h1>
                     {view === 'list' && (
-                        <button style={styles.btnPrimary} onClick={() => setView('add')}>
+                        <button style={styles.btnPrimary} onClick={() => {
+                            setEditingId(null);
+                            setFormData({
+                                name: '', category: '', price: '', description: '', stock_quantity: 10, is_featured: false, sku: '', material: '', dimensions: ''
+                            });
+                            setView('add');
+                        }}>
                             + Add Product
                         </button>
                     )}
                     {view === 'categories' && (
-                        <button style={styles.btnPrimary} onClick={() => setView('add-category')}>
+                        <button style={styles.btnPrimary} onClick={() => {
+                            setEditingId(null);
+                            setCategoryForm({ name: '', description: '' });
+                            setView('add-category');
+                        }}>
                             + Add Category
                         </button>
                     )}
+                    {view === 'faqs' && (
+                        <button style={styles.btnPrimary} onClick={() => {
+                            setEditingId(null);
+                            setFaqForm({ question: '', answer: '' });
+                            setView('add-faq');
+                        }}>
+                            + Add FAQ
+                        </button>
+                    )}
+
                 </div>
+
 
                 {/* PRODUCT LIST VIEW */}
                 {view === 'list' && (
@@ -398,7 +652,11 @@ const AdminDashboard = () => {
                                     products.map(product => (
                                         <tr key={product.id}>
                                             <td style={styles.td}>
-                                                <img src={product.image_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
+                                                <img
+                                                    src={product.image_url}
+                                                    alt={product.name}
+                                                    style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
+                                                />
                                             </td>
                                             <td style={styles.td}>{product.name}</td>
                                             <td style={styles.td}>
@@ -409,9 +667,11 @@ const AdminDashboard = () => {
                                             <td style={styles.td}>${product.price}</td>
                                             <td style={styles.td}>{product.stock_quantity}</td>
                                             <td style={styles.td}>
+                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditProduct(product)}>Edit</button>
                                                 <button style={styles.btnDanger} onClick={() => handleDelete(product.id)}>Delete</button>
                                             </td>
                                         </tr>
+
                                     ))
                                 )}
                             </tbody>
@@ -470,6 +730,41 @@ const AdminDashboard = () => {
                                     />
                                 </div>
                             </div>
+
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>SKU (Stock Keeping Unit)</label>
+                                <input
+                                    name="sku"
+                                    value={formData.sku}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                    placeholder="e.g., SANI-001"
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '20px' }}>
+                                <div style={{ ...styles.formGroup, flex: 1 }}>
+                                    <label style={styles.label}>Material</label>
+                                    <input
+                                        name="material"
+                                        value={formData.material}
+                                        onChange={handleInputChange}
+                                        style={styles.input}
+                                        placeholder="e.g., 100% Wool"
+                                    />
+                                </div>
+                                <div style={{ ...styles.formGroup, flex: 1 }}>
+                                    <label style={styles.label}>Dimensions</label>
+                                    <input
+                                        name="dimensions"
+                                        value={formData.dimensions}
+                                        onChange={handleInputChange}
+                                        style={styles.input}
+                                        placeholder="e.g., 10x15 cm"
+                                    />
+                                </div>
+                            </div>
+
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>Product Image</label>
                                 <input
@@ -515,6 +810,85 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
+                {/* NOTIFICATIONS VIEW */}
+                {view === 'notifications' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
+                            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Send New Notification</h3>
+                            <form onSubmit={handleSendNotification}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Title</label>
+                                    <input
+                                        name="title"
+                                        value={notificationForm.title}
+                                        onChange={handleNotificationChange}
+                                        style={styles.input}
+                                        required
+                                        placeholder="e.g. Shop Opening Soon!"
+                                    />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Message</label>
+                                    <textarea
+                                        name="message"
+                                        value={notificationForm.message}
+                                        onChange={handleNotificationChange}
+                                        style={styles.textarea}
+                                        required
+                                        placeholder="Write your message here..."
+                                    />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Type</label>
+                                    <select
+                                        name="type"
+                                        value={notificationForm.type}
+                                        onChange={handleNotificationChange}
+                                        style={styles.input}
+                                    >
+                                        <option value="general">General</option>
+                                        <option value="payment">Payment Reminder</option>
+                                        <option value="opening">Shop Opening</option>
+                                    </select>
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>User ID (Optional - leave empty for all)</label>
+                                    <input
+                                        name="user_id"
+                                        value={notificationForm.user_id}
+                                        onChange={handleNotificationChange}
+                                        style={styles.input}
+                                        placeholder="Specific User UUID"
+                                    />
+                                </div>
+                                <button type="submit" style={styles.btnPrimary}>
+                                    Send Notification
+                                </button>
+                            </form>
+                        </div>
+
+                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
+                            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Recent Notifications</h3>
+                            <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                {notifications.length === 0 ? (
+                                    <p style={{ color: '#6B7280' }}>No notifications sent yet.</p>
+                                ) : (
+                                    notifications.map(n => (
+                                        <div key={n.id} style={{ borderBottom: '1px solid #E5E7EB', padding: '12px 0' }}>
+                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>{n.title}</div>
+                                            <div style={{ fontSize: '13px', color: '#374151', margin: '4px 0' }}>{n.message}</div>
+                                            <div style={{ fontSize: '11px', color: '#9CA3AF', display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>{n.type.toUpperCase()}</span>
+                                                <span>{n.user_id ? 'Individual' : 'Broadcast'} • {new Date(n.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* CATEGORIES LIST VIEW */}
                 {view === 'categories' && (
                     <div style={styles.tableContainer}>
@@ -539,9 +913,11 @@ const AdminDashboard = () => {
                                             <td style={styles.td}><strong>{cat.name}</strong></td>
                                             <td style={styles.td}>{cat.description || '-'}</td>
                                             <td style={styles.td}>
+                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditCategory(cat)}>Edit</button>
                                                 <button style={styles.btnDanger} onClick={() => handleDeleteCategory(cat.id)}>Delete</button>
                                             </td>
                                         </tr>
+
                                     ))
                                 )}
                             </tbody>
@@ -581,6 +957,122 @@ const AdminDashboard = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                )}
+
+                {/* FAQ LIST VIEW */}
+                {view === 'faqs' && (
+                    <div style={styles.tableContainer}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>Question</th>
+                                    <th style={styles.th}>Answer</th>
+                                    <th style={styles.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {faqs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                            No FAQs found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    faqs.map(faq => (
+                                        <tr key={faq.id}>
+                                            <td style={{ ...styles.td, width: '30%' }}><strong>{faq.question}</strong></td>
+                                            <td style={styles.td}>{faq.answer}</td>
+                                            <td style={styles.td}>
+                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditFaq(faq)}>Edit</button>
+                                                <button style={styles.btnDanger} onClick={() => handleDeleteFaq(faq.id)}>Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* ADD FAQ FORM */}
+                {view === 'add-faq' && (
+                    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
+                        <form onSubmit={handleSubmitFaq}>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Question</label>
+                                <input
+                                    name="question"
+                                    value={faqForm.question}
+                                    onChange={handleFaqChange}
+                                    style={styles.input}
+                                    required
+                                />
+                            </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Answer</label>
+                                <textarea
+                                    name="answer"
+                                    value={faqForm.answer}
+                                    onChange={handleFaqChange}
+                                    style={styles.textarea}
+                                    required
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button type="button" onClick={() => setView('faqs')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
+                                    Cancel
+                                </button>
+                                <button type="submit" style={styles.btnPrimary}>
+                                    Save FAQ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+
+                {/* SALES LIST VIEW */}
+                {view === 'sales' && (
+                    <div style={styles.tableContainer}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={styles.th}>Date</th>
+                                    <th style={styles.th}>Order ID</th>
+                                    <th style={styles.th}>Customer</th>
+                                    <th style={styles.th}>Total</th>
+                                    <th style={styles.th}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orders.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                            No sales yet.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    orders.map(order => (
+                                        <tr key={order.id}>
+                                            <td style={styles.td}>{new Date(order.created_at).toLocaleDateString()}</td>
+                                            <td style={styles.td}>{order.id.slice(0, 8)}</td>
+                                            <td style={styles.td}>{order.customer_name}</td>
+                                            <td style={styles.td}>NPR {order.total_amount}</td>
+                                            <td style={styles.td}>
+                                                <span style={{
+                                                    backgroundColor: order.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
+                                                    color: order.status === 'completed' ? '#059669' : '#D97706',
+                                                    padding: '2px 8px', borderRadius: '50px', fontSize: '12px'
+                                                }}>
+                                                    {order.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 )}
 

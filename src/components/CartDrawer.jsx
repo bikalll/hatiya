@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
+import { supabase } from '../lib/supabaseClient';
 
 const CartDrawer = () => {
     const {
@@ -8,8 +9,67 @@ const CartDrawer = () => {
         cartItems,
         removeFromCart,
         updateQuantity,
-        cartTotal
+        cartTotal,
+        clearCart
     } = useCart();
+
+    const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+
+    const handleCheckout = async () => {
+        setIsCheckingOut(true);
+        try {
+            // 1. Create Order in Supabase
+            const { data: order, error: orderError } = await supabase
+                .from('orders')
+                .insert([{
+                    total_amount: cartTotal,
+                    status: 'pending',
+                    customer_name: 'Guest Customer' // You might want to grab this from inputs later
+                }])
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // 2. Create Order Items
+            const orderItems = cartItems.map(item => ({
+                order_id: order.id,
+                product_id: item.id,
+                product_name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('order_items')
+                .insert(orderItems);
+
+            if (itemsError) throw itemsError;
+
+            // 3. Construct WhatsApp Message
+            let message = `*New Order #${order.id.slice(0, 8)}*\n\n`;
+            cartItems.forEach(item => {
+                message += `- ${item.name} (x${item.quantity}) - NPR ${item.price}\n`;
+            });
+            message += `\n*Total: NPR ${cartTotal.toFixed(2)}*`;
+            message += `\n\nTo confirm, please reply with your delivery address.`;
+
+            // 4. Redirect to WhatsApp
+            const phoneNumber = '9702046179';
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+            clearCart();
+            window.open(whatsappUrl, '_blank');
+            closeCart();
+
+        } catch (error) {
+            console.error('Checkout Error:', error);
+            alert('Failed to process checkout. Please try again.');
+        } finally {
+            setIsCheckingOut(false);
+        }
+    };
 
     const styles = {
         overlay: {
@@ -176,10 +236,10 @@ const CartDrawer = () => {
                     ) : (
                         cartItems.map((item) => (
                             <div key={item.id} style={styles.itemCard}>
-                                <img src={item.image} alt={item.name} style={styles.itemImage} />
+                                <img src={item.image_url} alt={item.name} style={styles.itemImage} />
                                 <div style={styles.itemInfo}>
                                     <h4 style={styles.itemName}>{item.name}</h4>
-                                    <p style={styles.itemPrice}>{item.price}</p>
+                                    <p style={styles.itemPrice}>NPR {item.price}</p>
                                     <div style={styles.itemControls}>
                                         <div style={styles.qtyControls}>
                                             <button
@@ -213,10 +273,10 @@ const CartDrawer = () => {
                     <div style={styles.footer}>
                         <div style={styles.totalRow}>
                             <span>Total</span>
-                            <span>${cartTotal.toFixed(2)}</span>
+                            <span>NPR {cartTotal.toFixed(2)}</span>
                         </div>
-                        <button style={styles.checkoutBtn} onClick={() => alert('Checkout functionality coming soon!')}>
-                            Proceed to Checkout
+                        <button style={styles.checkoutBtn} onClick={handleCheckout} disabled={isCheckingOut}>
+                            {isCheckingOut ? 'Processing...' : 'Pre-order Now (No Payment Required)'}
                         </button>
                     </div>
                 )}

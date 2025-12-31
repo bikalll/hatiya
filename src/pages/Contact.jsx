@@ -1,8 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const Contact = () => {
+    const [faqs, setFaqs] = useState([]);
+    const [isLoadingFaqs, setIsLoadingFaqs] = useState(true);
+
+    useEffect(() => {
+        fetchFaqs();
+    }, []);
+
+    const fetchFaqs = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('faqs')
+                .select('*')
+                .order('created_at');
+
+            if (error) throw error;
+            setFaqs(data || []);
+        } catch (error) {
+            console.error('Error fetching FAQs:', error);
+        } finally {
+            setIsLoadingFaqs(false);
+        }
+    };
+
     const [formData, setFormData] = useState({
         name: '',
+
         email: '',
         subject: '',
         message: ''
@@ -213,55 +238,8 @@ const Contact = () => {
                             our team is ready to assist you.
                         </p>
 
-                        <div style={styles.contactCards}>
-                            <div style={styles.contactCard}>
-                                <div style={styles.cardIcon}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                        <circle cx="12" cy="10" r="3" />
-                                    </svg>
-                                </div>
-                                <div style={styles.cardContent}>
-                                    <div style={styles.cardTitle}>Address</div>
-                                    <div style={styles.cardValue}>Thamel, Kathmandu 44600, Nepal</div>
-                                </div>
-                            </div>
-                            <div style={styles.contactCard}>
-                                <div style={styles.cardIcon}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                                        <polyline points="22,6 12,13 2,6" />
-                                    </svg>
-                                </div>
-                                <div style={styles.cardContent}>
-                                    <div style={styles.cardTitle}>Email</div>
-                                    <div style={styles.cardValue}>hello@himalayan.com</div>
-                                </div>
-                            </div>
-                            <div style={styles.contactCard}>
-                                <div style={styles.cardIcon}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
-                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                                    </svg>
-                                </div>
-                                <div style={styles.cardContent}>
-                                    <div style={styles.cardTitle}>Phone</div>
-                                    <div style={styles.cardValue}>+977-1-4567890</div>
-                                </div>
-                            </div>
-                            <div style={styles.contactCard}>
-                                <div style={styles.cardIcon}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="12 6 12 12 16 14" />
-                                    </svg>
-                                </div>
-                                <div style={styles.cardContent}>
-                                    <div style={styles.cardTitle}>Business Hours</div>
-                                    <div style={styles.cardValue}>Sun - Fri: 10:00 AM - 7:00 PM</div>
-                                </div>
-                            </div>
-                        </div>
+                        {/* Contact info cards removed as requested */}
+
                     </div>
 
                     <div style={styles.formSection}>
@@ -330,35 +308,20 @@ const Contact = () => {
                     <h2 style={styles.sectionTitle}>Frequently Asked Questions</h2>
                 </div>
                 <div style={styles.faqGrid}>
-                    <div style={styles.faqCard}>
-                        <div style={styles.faqQuestion}>How long does shipping take?</div>
-                        <div style={styles.faqAnswer}>
-                            International shipping typically takes 7-14 business days.
-                            Express shipping is available for an additional fee.
-                        </div>
-                    </div>
-                    <div style={styles.faqCard}>
-                        <div style={styles.faqQuestion}>Are products authentic?</div>
-                        <div style={styles.faqAnswer}>
-                            Yes, every product is handcrafted by verified Nepali artisans.
-                            Each item comes with a certificate of authenticity.
-                        </div>
-                    </div>
-                    <div style={styles.faqCard}>
-                        <div style={styles.faqQuestion}>What is your return policy?</div>
-                        <div style={styles.faqAnswer}>
-                            We offer a 30-day return policy for unused items in original
-                            packaging. Contact us to initiate a return.
-                        </div>
-                    </div>
-                    <div style={styles.faqCard}>
-                        <div style={styles.faqQuestion}>Do you offer wholesale?</div>
-                        <div style={styles.faqAnswer}>
-                            Yes, we work with retailers worldwide. Contact us for wholesale
-                            inquiries and pricing information.
-                        </div>
-                    </div>
+                    {isLoadingFaqs ? (
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center' }}>Loading FAQs...</div>
+                    ) : faqs.length === 0 ? (
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center' }}>No FAQs available.</div>
+                    ) : (
+                        faqs.map(faq => (
+                            <div key={faq.id} style={styles.faqCard}>
+                                <div style={styles.faqQuestion}>{faq.question}</div>
+                                <div style={styles.faqAnswer}>{faq.answer}</div>
+                            </div>
+                        ))
+                    )}
                 </div>
+
             </section>
         </div>
     );

@@ -261,51 +261,7 @@ const About = () => {
                 </div>
             </section>
 
-            {/* Team Section */}
-            <section style={{ ...styles.section, ...styles.sectionWhite }}>
-                <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-                    <div style={styles.sectionTag}>The Team</div>
-                    <h2 style={styles.sectionTitle}>Meet Our Team</h2>
-                </div>
-                <div style={styles.teamGrid}>
-                    <div style={styles.teamCard}>
-                        <img
-                            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face"
-                            alt="Rajesh"
-                            style={styles.teamImage}
-                        />
-                        <h3 style={styles.teamName}>Rajesh Shrestha</h3>
-                        <div style={styles.teamRole}>Founder & CEO</div>
-                    </div>
-                    <div style={styles.teamCard}>
-                        <img
-                            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face"
-                            alt="Sunita"
-                            style={styles.teamImage}
-                        />
-                        <h3 style={styles.teamName}>Sunita Maharjan</h3>
-                        <div style={styles.teamRole}>Artisan Relations</div>
-                    </div>
-                    <div style={styles.teamCard}>
-                        <img
-                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face"
-                            alt="Binod"
-                            style={styles.teamImage}
-                        />
-                        <h3 style={styles.teamName}>Binod Tamang</h3>
-                        <div style={styles.teamRole}>Quality Assurance</div>
-                    </div>
-                    <div style={styles.teamCard}>
-                        <img
-                            src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face"
-                            alt="Maya"
-                            style={styles.teamImage}
-                        />
-                        <h3 style={styles.teamName}>Maya Gurung</h3>
-                        <div style={styles.teamRole}>Customer Experience</div>
-                    </div>
-                </div>
-            </section>
+            {/* Team Section Removed */}
         </div>
     );
 };

@@ -28,6 +28,8 @@ const Layout = ({ children }) => {
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import CartDrawer from './components/CartDrawer';
+import SaturdayGuard from './components/SaturdayGuard';
+
 
 import Profile from './pages/Profile';
 import AdminLogin from './pages/admin/AdminLogin';

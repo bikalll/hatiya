@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 
 const Navbar = () => {
     const location = useLocation();
@@ -9,6 +10,57 @@ const Navbar = () => {
     const { cartCount, toggleCart } = useCart();
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    // Fetch Notifications
+    React.useEffect(() => {
+        if (!user) return;
+
+        const fetchNotifications = async () => {
+            const { data } = await supabase
+                .from('notifications')
+                .select('*')
+                .or(`user_id.eq.${user.id},user_id.is.null`)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (data) {
+                setNotifications(data);
+                setUnreadCount(data.filter(n => !n.is_read).length);
+            }
+        };
+
+        fetchNotifications();
+
+        // Real-time subscription could go here
+        const channel = supabase
+            .channel('public:notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
+                if (payload.new.user_id === user.id || payload.new.user_id === null) {
+                    setNotifications(prev => [payload.new, ...prev]);
+                    setUnreadCount(prev => prev + 1);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
+
+    const markAsRead = async (id) => {
+        // Optimistic update
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    };
+
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
 
     const handleSearch = (e) => {
         if (e.key === 'Enter') {
@@ -138,8 +190,52 @@ const Navbar = () => {
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
+            cursor: 'pointer',
             textDecoration: 'none',
         },
+        notificationDropdown: {
+            position: 'absolute',
+            top: '50px',
+            right: '80px',
+            width: '320px',
+            backgroundColor: 'white',
+            border: '1px solid #E5E7EB',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            zIndex: 1001,
+            maxHeight: '400px',
+            overflowY: 'auto',
+        },
+        notificationItem: {
+            padding: '12px',
+            borderBottom: '1px solid #F3F4F6',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+        },
+        notificationTitle: {
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#111827',
+            marginBottom: '4px',
+        },
+        notificationMessage: {
+            fontSize: '13px',
+            color: '#6B7280',
+            lineHeight: '1.4',
+        },
+        notificationTime: {
+            fontSize: '11px',
+            color: '#9CA3AF',
+            marginTop: '4px',
+        },
+        unreadDot: {
+            display: 'inline-block',
+            width: '8px',
+            height: '8px',
+            backgroundColor: '#EF4444',
+            borderRadius: '50%',
+            marginRight: '8px',
+        }
     };
 
     const isActive = (path) => location.pathname === path;
@@ -155,14 +251,7 @@ const Navbar = () => {
             {/* Main Navigation */}
             <div style={styles.mainNav}>
                 <Link to="/" style={styles.logo}>
-                    <div style={styles.logoIcon}>
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                            <path d="M16 2L4 10v12l12 8 12-8V10L16 2z" fill="#059669" />
-                            <path d="M16 6L8 11v10l8 5 8-5V11L16 6z" fill="#10B981" />
-                            <path d="M16 10l-4 2.5v5L16 20l4-2.5v-5L16 10z" fill="#34D399" />
-                        </svg>
-                    </div>
-                    <span style={styles.logoText}>Himalayan</span>
+                    <img src="/favicon.png" alt="Sanibare Hatiya" style={{ height: '85px', objectFit: 'contain' }} />
                 </Link>
 
                 <div style={styles.navLinks}>
@@ -207,6 +296,41 @@ const Navbar = () => {
                             onKeyDown={handleSearch}
                         />
                     </div>
+
+                    <button style={styles.iconBtn} onClick={toggleNotifications}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        {unreadCount > 0 && <span style={{ ...styles.cartBadge, backgroundColor: '#EF4444' }}>{unreadCount}</span>}
+                    </button>
+
+                    {showNotifications && (
+                        <div style={styles.notificationDropdown}>
+                            <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: '600', fontSize: '14px' }}>Notifications</span>
+                                <button onClick={() => setShowNotifications(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px' }}>&times;</button>
+                            </div>
+                            {notifications.length === 0 ? (
+                                <div style={{ padding: '20px', textAlign: 'center', color: '#6B7280', fontSize: '14px' }}>No notifications</div>
+                            ) : (
+                                notifications.map(notification => (
+                                    <div
+                                        key={notification.id}
+                                        style={{ ...styles.notificationItem, backgroundColor: notification.is_read ? 'white' : '#F9FAFB' }}
+                                        onClick={() => markAsRead(notification.id)}
+                                    >
+                                        <div style={styles.notificationTitle}>
+                                            {!notification.is_read && <span style={styles.unreadDot}></span>}
+                                            {notification.title}
+                                        </div>
+                                        <div style={styles.notificationMessage}>{notification.message}</div>
+                                        <div style={styles.notificationTime}>{new Date(notification.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
 
                     <button style={styles.iconBtn} onClick={toggleCart}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
