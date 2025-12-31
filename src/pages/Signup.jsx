@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
@@ -10,19 +11,46 @@ const Signup = () => {
         confirmPassword: '',
         agreeTerms: false
     });
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const { signUp } = useAuth();
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setFormData({ ...formData, [e.target.name]: value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
+
         if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match');
+            setError('Passwords do not match');
             return;
         }
-        alert('Account created successfully!');
+
+        if (!formData.agreeTerms) {
+            setError('You must agree to the terms');
+            return;
+        }
+
+        try {
+            const { error } = await signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    data: {
+                        first_name: formData.firstName,
+                        last_name: formData.lastName,
+                    }
+                }
+            });
+            if (error) throw error;
+            alert('Account created! Please check your email to confirm.');
+            navigate('/login');
+        } catch (error) {
+            setError(error.message);
+        }
     };
 
     const styles = {
@@ -227,6 +255,7 @@ const Signup = () => {
 
                     <h1 style={styles.formTitle}>Create Account</h1>
                     <p style={styles.formSubtitle}>Join our community of craft enthusiasts</p>
+                    {error && <div style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
 
                     <form onSubmit={handleSubmit}>
                         <div style={styles.formRow}>

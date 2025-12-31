@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -7,15 +8,27 @@ const Login = () => {
         password: '',
         rememberMe: false
     });
+    const [error, setError] = useState(null);
+    const navigate = useNavigate();
+    const { signIn } = useAuth();
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
         setFormData({ ...formData, [e.target.name]: value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert('Login functionality would be implemented here');
+        try {
+            const { error } = await signIn({
+                email: formData.email,
+                password: formData.password,
+            });
+            if (error) throw error;
+            navigate('/profile');
+        } catch (error) {
+            setError(error.message);
+        }
     };
 
     const styles = {
@@ -210,6 +223,7 @@ const Login = () => {
                 <div style={styles.formContainer}>
                     <h1 style={styles.formTitle}>Sign In</h1>
                     <p style={styles.formSubtitle}>Enter your credentials to continue</p>
+                    {error && <div style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
 
                     <form onSubmit={handleSubmit}>
                         <div style={styles.formGroup}>

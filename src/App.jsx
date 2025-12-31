@@ -26,25 +26,31 @@ const Layout = ({ children }) => {
 };
 
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import CartDrawer from './components/CartDrawer';
+
+import Profile from './pages/Profile';
 
 function App() {
   return (
-    <CartProvider>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-          </Routes>
-        </Layout>
-      </Router>
-      <CartDrawer />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </Layout>
+        </Router>
+        <CartDrawer />
+      </CartProvider>
+    </AuthProvider>
   );
 }
 

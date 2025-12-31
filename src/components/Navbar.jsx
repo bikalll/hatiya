@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { cartCount, toggleCart } = useCart();
+    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleSearch = (e) => {
@@ -215,8 +217,16 @@ const Navbar = () => {
                         {cartCount > 0 && <span style={styles.cartBadge}>{cartCount}</span>}
                     </button>
 
-                    <Link to="/login" style={styles.authBtnOutline}>Log In</Link>
-                    <Link to="/signup" style={styles.authBtn}>Sign Up</Link>
+                    {user ? (
+                        <Link to="/profile" style={styles.authBtn}>
+                            Account
+                        </Link>
+                    ) : (
+                        <>
+                            <Link to="/login" style={styles.authBtnOutline}>Log In</Link>
+                            <Link to="/signup" style={styles.authBtn}>Sign Up</Link>
+                        </>
+                    )}
                 </div>
             </div>
         </nav>
