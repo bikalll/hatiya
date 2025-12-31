@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { cartCount, toggleCart } = useCart();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const handleSearch = (e) => {
+        if (e.key === 'Enter') {
+            navigate(`/shop?search=${encodeURIComponent(searchTerm)}`);
+        }
+    };
 
     const styles = {
         navbar: {
@@ -192,6 +200,9 @@ const Navbar = () => {
                             type="text"
                             placeholder="Search products..."
                             style={styles.searchInput}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={handleSearch}
                         />
                     </div>
 

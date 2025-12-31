@@ -45,9 +45,16 @@ const Shop = () => {
         }
     };
 
-    const filteredProducts = activeCategory === 'All'
-        ? allProducts
-        : allProducts.filter(p => p.category === activeCategory);
+    const searchTerm = searchParams.get('search') || '';
+
+    const filteredProducts = allProducts.filter(product => {
+        const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
+        const matchesSearch = searchTerm === '' ||
+            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+        return matchesCategory && matchesSearch;
+    });
 
     const styles = {
         page: {
