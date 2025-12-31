@@ -218,8 +218,29 @@ const Navbar = () => {
                     </button>
 
                     {user ? (
-                        <Link to="/profile" style={styles.authBtn}>
-                            Account
+                        <Link to="/profile" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: '#059669',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                overflow: 'hidden'
+                            }}>
+                                {user.user_metadata?.avatar_url ? (
+                                    <img src={user.user_metadata.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    (user.user_metadata?.first_name || user.email || 'U').charAt(0).toUpperCase()
+                                )}
+                            </div>
+                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                                {user.user_metadata?.first_name || 'Account'}
+                            </span>
                         </Link>
                     ) : (
                         <>
