@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const allProducts = [
     { id: 1, category: 'Handicrafts', name: 'Tibetan Singing Bowl', price: '$89', originalPrice: '$129', badge: 'Best Seller', image: 'https://images.unsplash.com/photo-1545147986-a9d6f2ab03b5?w=400&h=400&fit=crop' },
@@ -18,8 +19,29 @@ const allProducts = [
 const categories = ['All', 'Handicrafts', 'Art', 'Textiles', 'Spices', 'Jewelry', 'Decor'];
 
 const Shop = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activeCategory, setActiveCategory] = useState('All');
     const [sortBy, setSortBy] = useState('popular');
+
+    useEffect(() => {
+        const categoryParam = searchParams.get('category');
+        if (categoryParam && categories.includes(categoryParam)) {
+            setActiveCategory(categoryParam);
+        } else {
+            setActiveCategory('All');
+        }
+    }, [searchParams]);
+
+    const handleCategoryClick = (cat) => {
+        setActiveCategory(cat);
+        if (cat === 'All') {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('category');
+            setSearchParams(newParams);
+        } else {
+            setSearchParams({ category: cat });
+        }
+    };
 
     const filteredProducts = activeCategory === 'All'
         ? allProducts
@@ -208,7 +230,7 @@ const Shop = () => {
                                         ...styles.categoryItem,
                                         ...(activeCategory === cat ? styles.categoryItemActive : {})
                                     }}
-                                    onClick={() => setActiveCategory(cat)}
+                                    onClick={() => handleCategoryClick(cat)}
                                 >
                                     {cat}
                                 </button>
