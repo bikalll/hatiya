@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 const allProducts = [
     { id: 1, category: 'Handicrafts', name: 'Tibetan Singing Bowl', price: '$89', originalPrice: '$129', badge: 'Best Seller', image: 'https://images.unsplash.com/photo-1545147986-a9d6f2ab03b5?w=400&h=400&fit=crop' },
@@ -22,6 +23,7 @@ const Shop = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [activeCategory, setActiveCategory] = useState('All');
     const [sortBy, setSortBy] = useState('popular');
+    const { addToCart } = useCart();
 
     useEffect(() => {
         const categoryParam = searchParams.get('category');
@@ -273,7 +275,12 @@ const Shop = () => {
                                                 <span style={styles.originalPrice}>{product.originalPrice}</span>
                                             )}
                                         </div>
-                                        <button style={styles.addBtn}>Add to Cart</button>
+                                        <button
+                                            style={styles.addBtn}
+                                            onClick={() => addToCart(product)}
+                                        >
+                                            Add to Cart
+                                        </button>
                                     </div>
                                 </div>
                             </div>

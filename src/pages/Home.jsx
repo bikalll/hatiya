@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 // Products with real Unsplash images
 const products = [
@@ -23,6 +24,7 @@ const categories = [
 ];
 
 const Home = () => {
+    const { addToCart } = useCart();
     const styles = {
         page: {
             backgroundColor: '#FAFAFA',
@@ -464,7 +466,14 @@ const Home = () => {
                                                 <span style={styles.originalPrice}>{product.originalPrice}</span>
                                             )}
                                         </div>
-                                        <button style={styles.addBtn}>
+                                        <button
+                                            style={styles.addBtn}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                addToCart(product);
+                                            }}
+                                        >
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                 <path d="M12 5v14M5 12h14" />
                                             </svg>
