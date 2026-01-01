@@ -6,12 +6,11 @@ const Footer = () => {
         footer: {
             backgroundColor: '#111827',
             color: '#9CA3AF',
-            padding: '60px 60px 30px',
+            padding: 'clamp(30px, 6vw, 60px) clamp(16px, 4vw, 60px) clamp(20px, 4vw, 30px)',
         },
         footerGrid: {
             display: 'grid',
-            gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
-            gap: '60px',
+            gap: 'clamp(24px, 5vw, 60px)',
             marginBottom: '40px',
         },
         footerSection: {
@@ -102,7 +101,7 @@ const Footer = () => {
 
     return (
         <footer style={styles.footer}>
-            <div style={styles.footerGrid}>
+            <div style={styles.footerGrid} className="footer-grid">
                 {/* Brand Section */}
                 <div style={styles.footerSection}>
                     <div style={styles.logo}>

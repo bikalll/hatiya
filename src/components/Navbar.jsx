@@ -13,6 +13,7 @@ const Navbar = () => {
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Fetch Notifications
     React.useEffect(() => {
@@ -240,21 +241,119 @@ const Navbar = () => {
 
     const isActive = (path) => location.pathname === path;
 
+    const MobileMenu = () => (
+        <div
+            className={`mobile-menu-overlay ${isMobileMenuOpen ? 'active' : ''}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+        >
+            <div
+                className="mobile-menu-content"
+                onClick={(e) => e.stopPropagation()}
+                style={{ transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(100%)' }}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid #E5E7EB', paddingBottom: '16px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#065F46' }}>Menu</span>
+                    <button onClick={() => setIsMobileMenuOpen(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <Link to="/" style={{ ...styles.navLink, fontSize: '16px' }} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+                    <Link to="/shop" style={{ ...styles.navLink, fontSize: '16px' }} onClick={() => setIsMobileMenuOpen(false)}>Shop</Link>
+                    <Link to="/about" style={{ ...styles.navLink, fontSize: '16px' }} onClick={() => setIsMobileMenuOpen(false)}>About</Link>
+                    <Link to="/contact" style={{ ...styles.navLink, fontSize: '16px' }} onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>
+                    <hr style={{ border: 'none', borderTop: '1px solid #E5E7EB', margin: '8px 0' }} />
+                    <Link
+                        to="/seller/signup"
+                        style={{
+                            backgroundColor: '#059669',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            textDecoration: 'none',
+                            textAlign: 'center'
+                        }}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        Become a Seller
+                    </Link>
+                    <hr style={{ border: 'none', borderTop: '1px solid #E5E7EB', margin: '8px 0' }} />
+                    {user ? (
+                        <>
+                            <Link to="/profile" style={{ ...styles.navLink, fontSize: '16px' }} onClick={() => setIsMobileMenuOpen(false)}>My Account</Link>
+                            <button onClick={() => { toggleCart(); setIsMobileMenuOpen(false); }} style={{ ...styles.authBtnOutline, textAlign: 'left' }}>Cart ({cartCount})</button>
+                        </>
+                    ) : (
+                        <>
+                            <Link to="/login" style={styles.authBtnOutline} onClick={() => setIsMobileMenuOpen(false)}>Log In</Link>
+                            <Link to="/signup" style={styles.authBtn} onClick={() => setIsMobileMenuOpen(false)}>Sign Up</Link>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <nav style={styles.navbar}>
-            {/* Top Bar */}
-            <div style={styles.topBar}>
+            {/* Top Bar - Hidden on mobile via CSS class 'top-bar' */}
+            <div style={styles.topBar} className="top-bar">
                 <span>Authentic Nepali Products | Handcrafted with Care</span>
                 <span>Free Shipping on Orders Over $75</span>
             </div>
 
             {/* Main Navigation */}
-            <div style={styles.mainNav}>
-                <Link to="/" style={styles.logo}>
-                    <img src="/favicon.png" alt="Sanibare Hatiya" style={{ height: '85px', objectFit: 'contain' }} />
-                </Link>
+            <div style={styles.mainNav} className="nav-container">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {/* Hamburger Button */}
+                    <button className="nav-mobile-btn" onClick={() => setIsMobileMenuOpen(true)}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
 
-                <div style={styles.navLinks}>
+                    <Link to="/" style={styles.logo}>
+                        <img src="/favicon.png" alt="Sanibare Hatiya" style={{ height: '40px', objectFit: 'contain' }} />
+                        <span style={styles.logoText} className="nav-logo-text">Sanibare</span>
+                    </Link>
+                </div>
+
+                {/* Mobile-visible account/cart icons */}
+                <div className="nav-mobile-icons" style={{ display: 'none', alignItems: 'center', gap: '12px' }}>
+                    <button style={styles.iconBtn} onClick={toggleCart}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                        {cartCount > 0 && <span style={styles.cartBadge}>{cartCount}</span>}
+                    </button>
+                    {user && (
+                        <Link to="/profile" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: '#059669',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                overflow: 'hidden'
+                            }}>
+                                {user.user_metadata?.avatar_url ? (
+                                    <img src={user.user_metadata.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    (user.user_metadata?.first_name || user.email || 'U').charAt(0).toUpperCase()
+                                )}
+                            </div>
+                        </Link>
+                    )}
+                </div>
+
+                <div style={styles.navLinks} className="nav-links-desktop">
                     <Link
                         to="/"
                         style={{ ...styles.navLink, ...(isActive('/') ? styles.navLinkActive : {}) }}
@@ -279,10 +378,25 @@ const Navbar = () => {
                     >
                         Contact
                     </Link>
+                    <Link
+                        to="/seller/signup"
+                        style={{
+                            backgroundColor: '#059669',
+                            color: 'white',
+                            padding: '8px 16px',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            textDecoration: 'none',
+                            marginLeft: '8px'
+                        }}
+                    >
+                        Become a Seller
+                    </Link>
                 </div>
 
-                <div style={styles.navRight}>
-                    <div style={styles.searchBar}>
+                <div style={styles.navRight} className="nav-right-desktop">
+                    <div style={styles.searchBar} className="nav-search-bar">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
                             <circle cx="11" cy="11" r="8" />
                             <path d="m21 21-4.35-4.35" />
@@ -374,7 +488,9 @@ const Navbar = () => {
                     )}
                 </div>
             </div>
-        </nav>
+
+            <MobileMenu />
+        </nav >
     );
 };
 

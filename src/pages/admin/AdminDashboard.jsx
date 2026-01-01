@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     const [editingId, setEditingId] = useState(null);
     const [sellers, setSellers] = useState([]);
     const [unverifiedProducts, setUnverifiedProducts] = useState([]);
+    const [selectedSeller, setSelectedSeller] = useState(null);
 
 
 
@@ -69,11 +70,12 @@ const AdminDashboard = () => {
 
     const fetchSellers = async () => {
         try {
+            // Fetch sellers from profiles table
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .not('seller_status', 'is', null) // Only fetch users who applied
-                .order('created_at', { ascending: false });
+                .not('seller_status', 'is', null)
+                .order('seller_applied_at', { ascending: false });
             if (error) throw error;
             setSellers(data || []);
         } catch (error) {
@@ -89,7 +91,12 @@ const AdminDashboard = () => {
                 .eq('is_verified', false)
                 .order('created_at', { ascending: false });
             if (error) throw error;
-            setUnverifiedProducts(data || []);
+            // Flatten for easier access
+            const flattenedData = (data || []).map(product => ({
+                ...product,
+                store_name: product.profiles?.store_name,
+            }));
+            setUnverifiedProducts(flattenedData);
         } catch (error) {
             console.error('Error fetching unverified products:', error);
         }
@@ -389,15 +396,26 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleVerifySeller = async (sellerId, status) => {
+    const handleVerifySeller = async (sellerId, newStatus, adminNotes = '') => {
         try {
+            const updateData = {
+                seller_status: newStatus,
+                admin_notes: adminNotes || null,
+            };
+
+            if (newStatus === 'approved') {
+                updateData.seller_approved_at = new Date().toISOString();
+            } else if (newStatus === 'rejected') {
+                updateData.seller_rejected_at = new Date().toISOString();
+            }
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ seller_status: status })
+                .update(updateData)
                 .eq('id', sellerId);
 
             if (error) throw error;
-            alert(`Seller ${status} successfully!`);
+            alert(`Seller ${newStatus} successfully!`);
             fetchSellers();
         } catch (error) {
             alert('Error updating seller status: ' + error.message);
@@ -715,49 +733,69 @@ const AdminDashboard = () => {
                 {/* SELLERS VIEW */}
                 {
                     view === 'sellers' && (
-                        <div style={styles.tableContainer}>
-                            <table style={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th style={styles.th}>Store Name</th>
-                                        <th style={styles.th}>Email</th>
-                                        <th style={styles.th}>Status</th>
-                                        <th style={styles.th}>Date</th>
-                                        <th style={styles.th}>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sellers.length === 0 ? (
-                                        <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center' }}>No seller applications found.</td></tr>
-                                    ) : (
-                                        sellers.map(seller => (
-                                            <tr key={seller.id}>
-                                                <td style={styles.td}>{seller.store_name}</td>
-                                                <td style={styles.td}>{seller.email}</td>
-                                                <td style={styles.td}>
-                                                    <span style={{
-                                                        padding: '2px 8px', borderRadius: '12px', fontSize: '12px',
-                                                        backgroundColor: seller.seller_status === 'approved' ? '#D1FAE5' : seller.seller_status === 'rejected' ? '#FEE2E2' : '#FEF3C7',
-                                                        color: seller.seller_status === 'approved' ? '#065F46' : seller.seller_status === 'rejected' ? '#991B1B' : '#92400E'
-                                                    }}>
-                                                        {seller.seller_status.toUpperCase()}
-                                                    </span>
-                                                </td>
-                                                <td style={styles.td}>{new Date(seller.created_at).toLocaleDateString()}</td>
-                                                <td style={styles.td}>
-                                                    {seller.seller_status === 'pending' && (
+                        <div>
+                            {/* Stats */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                                <div style={{ backgroundColor: '#FEF3C7', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#B45309' }}>{sellers.filter(s => s.seller_status === 'pending').length}</div>
+                                    <div style={{ fontSize: '13px', color: '#92400E' }}>Pending</div>
+                                </div>
+                                <div style={{ backgroundColor: '#D1FAE5', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#065F46' }}>{sellers.filter(s => s.seller_status === 'approved').length}</div>
+                                    <div style={{ fontSize: '13px', color: '#047857' }}>Approved</div>
+                                </div>
+                                <div style={{ backgroundColor: '#FEE2E2', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '28px', fontWeight: '700', color: '#DC2626' }}>{sellers.filter(s => s.seller_status === 'rejected').length}</div>
+                                    <div style={{ fontSize: '13px', color: '#B91C1C' }}>Rejected</div>
+                                </div>
+                            </div>
+
+                            <div style={styles.tableContainer}>
+                                <table style={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th style={styles.th}>Store Name</th>
+                                            <th style={styles.th}>Email</th>
+                                            <th style={styles.th}>Status</th>
+                                            <th style={styles.th}>Date</th>
+                                            <th style={styles.th}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sellers.length === 0 ? (
+                                            <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center' }}>No seller applications found.</td></tr>
+                                        ) : (
+                                            sellers.map(seller => (
+                                                <tr key={seller.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedSeller(seller)}>
+                                                    <td style={styles.td}>{seller.store_name || 'N/A'}</td>
+                                                    <td style={styles.td}>{seller.email}</td>
+                                                    <td style={styles.td}>
+                                                        <span style={{
+                                                            padding: '2px 8px', borderRadius: '12px', fontSize: '12px',
+                                                            backgroundColor: seller.seller_status === 'approved' ? '#D1FAE5' : seller.seller_status === 'rejected' ? '#FEE2E2' : '#FEF3C7',
+                                                            color: seller.seller_status === 'approved' ? '#065F46' : seller.seller_status === 'rejected' ? '#991B1B' : '#92400E'
+                                                        }}>
+                                                            {seller.seller_status?.toUpperCase() || 'PENDING'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={styles.td}>{seller.seller_applied_at ? new Date(seller.seller_applied_at).toLocaleDateString() : 'N/A'}</td>
+                                                    <td style={styles.td} onClick={e => e.stopPropagation()}>
                                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                                            <button onClick={() => handleVerifySeller(seller.id, 'approved')} style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px' }}>Approve</button>
-                                                            <button onClick={() => handleVerifySeller(seller.id, 'rejected')} style={{ ...styles.btnDanger, padding: '6px 12px', fontSize: '12px' }}>Reject</button>
+                                                            <button onClick={() => setSelectedSeller(seller)} style={{ ...styles.btnSecondary, padding: '6px 12px', fontSize: '12px' }}>View</button>
+                                                            {seller.seller_status === 'pending' && (
+                                                                <>
+                                                                    <button onClick={() => handleVerifySeller(seller.id, 'approved')} style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px' }}>Approve</button>
+                                                                    <button onClick={() => handleVerifySeller(seller.id, 'rejected')} style={{ ...styles.btnDanger, padding: '6px 12px', fontSize: '12px' }}>Reject</button>
+                                                                </>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    {seller.seller_status !== 'pending' && <span style={{ color: '#9CA3AF', fontSize: '12px' }}>Processed</span>}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )
                 }
@@ -1268,7 +1306,131 @@ const AdminDashboard = () => {
                     )
                 }
 
+
+
             </main >
+
+            {/* Seller Detail Modal */}
+            {selectedSeller && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    padding: '20px'
+                }} onClick={() => setSelectedSeller(null)}>
+                    <div style={{
+                        backgroundColor: 'white', borderRadius: '16px', maxWidth: '700px',
+                        width: '100%', maxHeight: '90vh', overflow: 'auto', padding: '32px'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <h2 style={{ margin: 0, fontSize: '24px', color: '#111827' }}>Seller Details</h2>
+                            <button onClick={() => setSelectedSeller(null)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6B7280' }}>×</button>
+                        </div>
+
+                        {/* Status & Email Verification */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                            <div style={{ padding: '16px', backgroundColor: selectedSeller.seller_status === 'approved' ? '#D1FAE5' : selectedSeller.seller_status === 'rejected' ? '#FEE2E2' : '#FEF3C7', borderRadius: '12px' }}>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Application Status</p>
+                                <p style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: selectedSeller.seller_status === 'approved' ? '#065F46' : selectedSeller.seller_status === 'rejected' ? '#991B1B' : '#92400E' }}>
+                                    {selectedSeller.seller_status?.toUpperCase() || 'PENDING'}
+                                </p>
+                            </div>
+                            <div style={{ padding: '16px', backgroundColor: selectedSeller.email_confirmed_at ? '#D1FAE5' : '#FEE2E2', borderRadius: '12px' }}>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Email Verification</p>
+                                <p style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: selectedSeller.email_confirmed_at ? '#065F46' : '#991B1B' }}>
+                                    {selectedSeller.email_confirmed_at ? '✓ Verified' : '✗ Not Verified'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Account Info */}
+                        <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151' }}>Account Information</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Email:</span><br /><strong>{selectedSeller.email || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Applied:</span><br /><strong>{selectedSeller.seller_applied_at ? new Date(selectedSeller.seller_applied_at).toLocaleString() : 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>User ID:</span><br /><strong style={{ fontSize: '12px', wordBreak: 'break-all' }}>{selectedSeller.id}</strong></div>
+                                {selectedSeller.seller_approved_at && <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Approved:</span><br /><strong>{new Date(selectedSeller.seller_approved_at).toLocaleString()}</strong></div>}
+                            </div>
+                        </div>
+
+                        {/* Business Info */}
+                        <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151' }}>Business Information</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Store Name:</span><br /><strong>{selectedSeller.store_name || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Business Name:</span><br /><strong>{selectedSeller.business_name || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Business Type:</span><br /><strong>{selectedSeller.business_type || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Registration #:</span><br /><strong>{selectedSeller.business_registration_number || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Tax ID:</span><br /><strong>{selectedSeller.tax_id || 'N/A'}</strong></div>
+                            </div>
+                            {selectedSeller.store_description && (
+                                <div style={{ marginTop: '12px' }}><span style={{ color: '#6B7280', fontSize: '13px' }}>Store Description:</span><br /><strong>{selectedSeller.store_description}</strong></div>
+                            )}
+                        </div>
+
+                        {/* Contact Info */}
+                        <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151' }}>Contact Information</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Phone:</span><br /><strong>{selectedSeller.phone || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Country:</span><br /><strong>{selectedSeller.country || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>City:</span><br /><strong>{selectedSeller.city || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Postal Code:</span><br /><strong>{selectedSeller.postal_code || 'N/A'}</strong></div>
+                            </div>
+                            {selectedSeller.address && (
+                                <div style={{ marginTop: '12px' }}><span style={{ color: '#6B7280', fontSize: '13px' }}>Address:</span><br /><strong>{selectedSeller.address}</strong></div>
+                            )}
+                        </div>
+
+                        {/* Bank Info */}
+                        <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#F9FAFB', borderRadius: '12px' }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#374151' }}>Bank / Payout Information</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Bank Name:</span><br /><strong>{selectedSeller.bank_name || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Account Name:</span><br /><strong>{selectedSeller.bank_account_name || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>Account Number:</span><br /><strong>{selectedSeller.bank_account_number || 'N/A'}</strong></div>
+                                <div><span style={{ color: '#6B7280', fontSize: '13px' }}>SWIFT Code:</span><br /><strong>{selectedSeller.bank_swift_code || 'N/A'}</strong></div>
+                            </div>
+                        </div>
+
+                        {/* Admin Notes */}
+                        {selectedSeller.admin_notes && (
+                            <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#FEF3C7', borderRadius: '12px' }}>
+                                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#92400E' }}>Admin Notes</h3>
+                                <p style={{ margin: 0, color: '#92400E' }}>{selectedSeller.admin_notes}</p>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        {selectedSeller.seller_status === 'pending' && (
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button
+                                    onClick={() => { handleVerifySeller(selectedSeller.id, 'approved'); setSelectedSeller(null); }}
+                                    style={{ ...styles.btnPrimary, flex: 1, padding: '14px', fontSize: '16px', justifyContent: 'center' }}
+                                >
+                                    ✓ Approve Seller
+                                </button>
+                                <button
+                                    onClick={() => { handleVerifySeller(selectedSeller.id, 'rejected'); setSelectedSeller(null); }}
+                                    style={{ ...styles.btnDanger, flex: 1, padding: '14px', fontSize: '16px', justifyContent: 'center' }}
+                                >
+                                    ✗ Reject Seller
+                                </button>
+                            </div>
+                        )}
+
+                        {selectedSeller.seller_status !== 'pending' && (
+                            <button
+                                onClick={() => setSelectedSeller(null)}
+                                style={{ ...styles.btnSecondary, width: '100%', padding: '14px', fontSize: '16px', justifyContent: 'center' }}
+                            >
+                                Close
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

@@ -37,6 +37,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import SellerLogin from './pages/seller/SellerLogin';
 import SellerSignup from './pages/seller/SellerSignup';
 import SellerDashboard from './pages/seller/SellerDashboard';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   return (
@@ -48,14 +49,13 @@ function App() {
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-            {/* Seller Routes - Separate Layout or Main Layout? Let's use Main for now or a custom layout */}
+            {/* Seller Routes - Standalone (No Navbar/Footer) */}
             <Route path="/seller/login" element={<SellerLogin />} />
             <Route path="/seller/signup" element={<SellerSignup />} />
-            <Route path="/seller/dashboard" element={
-              <Layout>
-                <SellerDashboard />
-              </Layout>
-            } />
+            <Route path="/seller/dashboard" element={<SellerDashboard />} />
+
+            {/* Auth Callback for Email Verification - redirects to appropriate login */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             {/* Public Routes - Main Layout */}
             <Route path="*" element={

@@ -244,17 +244,22 @@ const Signup = () => {
             justifyContent: 'center',
         },
     };
+    // Check if mobile
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     return (
-        <div style={styles.page}>
-            <div style={styles.leftPanel}>
+        <div style={{ ...styles.page, flexDirection: isMobile ? 'column' : 'row' }}>
+            <div style={{ ...styles.leftPanel, flex: isMobile ? 'none' : 1, minHeight: isMobile ? '100vh' : 'auto', padding: isMobile ? '40px 20px' : '60px' }}>
                 <div style={styles.formContainer}>
                     <Link to="/" style={styles.logo}>
-                        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                            <path d="M16 2L4 10v12l12 8 12-8V10L16 2z" fill="#059669" />
-                            <path d="M16 6L8 11v10l8 5 8-5V11L16 6z" fill="#10B981" />
-                        </svg>
-                        <span style={styles.logoText}>Himalayan</span>
+                        <img src="/favicon.png" alt="Logo" style={{ height: '40px' }} />
+                        <span style={styles.logoText}>Sanibare Hatiya</span>
                     </Link>
 
                     <h1 style={styles.formTitle}>Create Account</h1>
@@ -357,43 +362,45 @@ const Signup = () => {
                 </div>
             </div>
 
-            <div style={styles.rightPanel}>
-                <div style={styles.rightContent}>
-                    <h2 style={styles.rightTitle}>
-                        Join 15,000+<br />Happy Customers
-                    </h2>
-                    <p style={styles.rightSubtitle}>
-                        Create your account and start exploring authentic Nepali
-                        craftsmanship from the comfort of your home.
-                    </p>
-                    <div style={styles.benefitsList}>
-                        <div style={styles.benefitItem}>
-                            <div style={styles.benefitIcon}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
+            {!isMobile && (
+                <div style={styles.rightPanel}>
+                    <div style={styles.rightContent}>
+                        <h2 style={styles.rightTitle}>
+                            Join 15,000+<br />Happy Customers
+                        </h2>
+                        <p style={styles.rightSubtitle}>
+                            Create your account and start exploring authentic Nepali
+                            craftsmanship from the comfort of your home.
+                        </p>
+                        <div style={styles.benefitsList}>
+                            <div style={styles.benefitItem}>
+                                <div style={styles.benefitIcon}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                                <span>Exclusive member discounts up to 20%</span>
                             </div>
-                            <span>Exclusive member discounts up to 20%</span>
-                        </div>
-                        <div style={styles.benefitItem}>
-                            <div style={styles.benefitIcon}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
+                            <div style={styles.benefitItem}>
+                                <div style={styles.benefitIcon}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                                <span>Free shipping on your first order</span>
                             </div>
-                            <span>Free shipping on your first order</span>
-                        </div>
-                        <div style={styles.benefitItem}>
-                            <div style={styles.benefitIcon}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
+                            <div style={styles.benefitItem}>
+                                <div style={styles.benefitIcon}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                                <span>Early access to new collections</span>
                             </div>
-                            <span>Early access to new collections</span>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

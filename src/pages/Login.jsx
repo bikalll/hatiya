@@ -203,29 +203,48 @@ const Login = () => {
         },
     };
 
-    return (
-        <div style={styles.page}>
-            <div style={styles.leftPanel}>
-                <div style={styles.leftContent}>
-                    <Link to="/" style={styles.logo}>
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                            <path d="M16 2L4 10v12l12 8 12-8V10L16 2z" fill="#10B981" />
-                            <path d="M16 6L8 11v10l8 5 8-5V11L16 6z" fill="#34D399" />
-                        </svg>
-                        <span style={styles.logoText}>Himalayan</span>
-                    </Link>
-                    <h2 style={styles.leftTitle}>
-                        Welcome Back
-                    </h2>
-                    <p style={styles.leftSubtitle}>
-                        Sign in to access your account, track orders, and continue
-                        exploring authentic Nepali treasures.
-                    </p>
-                </div>
-            </div>
+    // Check if mobile
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
 
-            <div style={styles.rightPanel}>
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return (
+        <div style={{ ...styles.page, flexDirection: isMobile ? 'column' : 'row' }}>
+            {!isMobile && (
+                <div style={styles.leftPanel}>
+                    <div style={styles.leftContent}>
+                        <Link to="/" style={styles.logo}>
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                <path d="M16 2L4 10v12l12 8 12-8V10L16 2z" fill="#10B981" />
+                                <path d="M16 6L8 11v10l8 5 8-5V11L16 6z" fill="#34D399" />
+                            </svg>
+                            <span style={styles.logoText}>Sanibare Hatiya</span>
+                        </Link>
+                        <h2 style={styles.leftTitle}>
+                            Welcome Back
+                        </h2>
+                        <p style={styles.leftSubtitle}>
+                            Sign in to access your account, track orders, and continue
+                            exploring authentic Nepali treasures.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div style={{ ...styles.rightPanel, flex: isMobile ? 'none' : 1, minHeight: isMobile ? '100vh' : 'auto' }}>
                 <div style={styles.formContainer}>
+                    {isMobile && (
+                        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                                <img src="/favicon.png" alt="Logo" style={{ height: '48px' }} />
+                            </Link>
+                            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#065F46' }}>Sanibare Hatiya</h1>
+                        </div>
+                    )}
                     <h1 style={styles.formTitle}>Sign In</h1>
                     <p style={styles.formSubtitle}>Enter your credentials to continue</p>
                     {error && <div style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}

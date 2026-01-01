@@ -39,13 +39,14 @@ const Home = () => {
         // Revamped Hero
         hero: {
             position: 'relative',
-            height: '600px',
+            minHeight: '600px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
             color: 'white',
             overflow: 'hidden',
+            padding: '60px 20px',
         },
         heroBackground: {
             position: 'absolute',
@@ -53,7 +54,6 @@ const Home = () => {
             left: 0,
             width: '100%',
             height: '100%',
-            // Using a high-quality landscape image for the hero background
             backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1544735716-392fe2489ffa?q=80&w=2071&auto=format&fit=crop')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -67,7 +67,7 @@ const Home = () => {
         },
         heroTag: {
             color: '#D1FAE5',
-            fontSize: '14px',
+            fontSize: 'clamp(11px, 2vw, 14px)',
             fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: '3px',
@@ -79,14 +79,14 @@ const Home = () => {
             backdropFilter: 'blur(5px)',
         },
         heroTitle: {
-            fontSize: '64px',
+            fontSize: 'clamp(32px, 6vw, 64px)',
             fontWeight: '700',
             lineHeight: '1.1',
             marginBottom: '24px',
             textShadow: '0 2px 4px rgba(0,0,0,0.3)',
         },
         heroSubtitle: {
-            fontSize: '20px',
+            fontSize: 'clamp(14px, 2.5vw, 20px)',
             color: '#E5E7EB',
             marginBottom: '40px',
             lineHeight: '1.6',
@@ -96,8 +96,9 @@ const Home = () => {
         },
         heroButtons: {
             display: 'flex',
-            gap: '20px',
+            gap: '16px',
             justifyContent: 'center',
+            flexWrap: 'wrap',
         },
         primaryBtn: {
             backgroundColor: '#059669',
@@ -125,10 +126,9 @@ const Home = () => {
             transition: 'transform 0.2s',
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         },
-
         // Revamped Categories
         section: {
-            padding: '100px 60px',
+            padding: 'clamp(40px, 8vw, 100px) clamp(16px, 4vw, 60px)',
         },
         sectionHeader: {
             textAlign: 'center',
@@ -156,15 +156,15 @@ const Home = () => {
         },
         categoriesGrid: {
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '30px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 'clamp(16px, 3vw, 30px)',
         },
         categoryCard: {
             position: 'relative',
             borderRadius: '20px',
             overflow: 'hidden',
             cursor: 'pointer',
-            height: '300px',
+            height: 'clamp(200px, 40vw, 300px)',
             textDecoration: 'none',
         },
         categoryImage: {
@@ -201,13 +201,13 @@ const Home = () => {
 
         // Revamped Products
         productsSection: {
-            padding: '100px 60px',
+            padding: 'clamp(40px, 8vw, 100px) clamp(16px, 4vw, 60px)',
             backgroundColor: 'white',
         },
         productsGrid: {
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '30px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 'clamp(16px, 3vw, 30px)',
         },
         productCard: {
             backgroundColor: 'white',
@@ -299,13 +299,13 @@ const Home = () => {
 
         // Features
         featuresSection: {
-            padding: '80px 60px',
+            padding: 'clamp(40px, 8vw, 80px) clamp(16px, 4vw, 60px)',
             backgroundColor: '#F9FAFB',
         },
         featuresGrid: {
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '40px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 'clamp(20px, 4vw, 40px)',
         },
         featureCard: {
             textAlign: 'center',
@@ -336,7 +336,7 @@ const Home = () => {
 
         // Newsletter
         newsletter: {
-            padding: '100px 60px',
+            padding: 'clamp(40px, 8vw, 100px) clamp(16px, 4vw, 60px)',
             backgroundColor: '#065F46',
             textAlign: 'center',
             position: 'relative',
@@ -359,31 +359,34 @@ const Home = () => {
             margin: '0 auto',
         },
         newsletterTitle: {
-            fontSize: '36px',
+            fontSize: 'clamp(24px, 5vw, 36px)',
             fontWeight: '700',
             color: 'white',
             marginBottom: '16px',
         },
         newsletterSubtitle: {
-            fontSize: '16px',
+            fontSize: 'clamp(13px, 2vw, 16px)',
             color: '#D1FAE5',
-            marginBottom: '40px',
+            marginBottom: 'clamp(24px, 5vw, 40px)',
         },
         newsletterForm: {
             display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
             gap: '12px',
             maxWidth: '500px',
             margin: '0 auto',
             backgroundColor: 'rgba(255,255,255,0.1)',
             padding: '8px',
-            borderRadius: '50px',
+            borderRadius: '16px',
         },
         newsletterInput: {
-            flex: 1,
-            padding: '16px 24px',
+            flex: '1 1 200px',
+            minWidth: '0',
+            padding: 'clamp(12px, 2vw, 16px) clamp(16px, 3vw, 24px)',
             borderRadius: '50px',
             border: 'none',
-            fontSize: '15px',
+            fontSize: 'clamp(13px, 2vw, 15px)',
             outline: 'none',
             backgroundColor: 'transparent',
             color: 'white',
@@ -391,13 +394,14 @@ const Home = () => {
         newsletterBtn: {
             backgroundColor: 'white',
             color: '#065F46',
-            padding: '16px 36px',
+            padding: 'clamp(12px, 2vw, 16px) clamp(20px, 4vw, 36px)',
             borderRadius: '50px',
-            fontSize: '15px',
+            fontSize: 'clamp(13px, 2vw, 15px)',
             fontWeight: '600',
             border: 'none',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
+            flex: '0 0 auto',
         },
     };
 
@@ -428,7 +432,7 @@ const Home = () => {
                     <h2 style={styles.sectionTitle}>Curated Collections</h2>
                     <p style={styles.sectionSubtitle}>Browse products by category</p>
                 </div>
-                <div style={styles.categoriesGrid}>
+                <div style={styles.categoriesGrid} className="grid-cols-3">
                     {categories.map((cat) => (
                         <Link
                             to={`/shop?category=${cat.name}`}
@@ -464,7 +468,7 @@ const Home = () => {
                     <h2 style={styles.sectionTitle}>Featured Arrivals</h2>
                     <p style={styles.sectionSubtitle}>Handpicked items just for you</p>
                 </div>
-                <div style={styles.productsGrid}>
+                <div style={styles.productsGrid} className="grid-cols-4">
                     {featuredProducts.length === 0 ? (
                         <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#6B7280' }}>
                             <p>Checking out our latest arrivals...</p>

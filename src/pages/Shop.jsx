@@ -25,6 +25,7 @@ const Shop = () => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState(['All']);
     const [isLoading, setIsLoading] = useState(true);
+    const [showMobileFilters, setShowMobileFilters] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -94,22 +95,22 @@ const Shop = () => {
         },
         header: {
             backgroundColor: '#065F46',
-            padding: '50px 60px',
+            padding: 'clamp(30px, 5vw, 50px) clamp(20px, 5vw, 60px)',
             textAlign: 'center',
         },
         headerTitle: {
-            fontSize: '32px',
+            fontSize: 'clamp(24px, 4vw, 32px)',
             fontWeight: '600',
             color: 'white',
             marginBottom: '8px',
         },
         headerSubtitle: {
-            fontSize: '15px',
+            fontSize: 'clamp(13px, 2vw, 15px)',
             color: '#A7F3D0',
         },
 
         mainSection: {
-            padding: '40px 60px',
+            padding: 'clamp(20px, 4vw, 40px) clamp(16px, 4vw, 60px)',
             display: 'flex',
             gap: '40px',
         },
@@ -264,8 +265,43 @@ const Shop = () => {
                 <p style={styles.headerSubtitle}>Explore our complete collection of authentic Nepali treasures</p>
             </header>
 
-            <section style={styles.mainSection}>
-                <aside style={styles.sidebar}>
+            <section style={styles.mainSection} className="shop-layout">
+                {/* Mobile Filter Button */}
+                <button
+                    className="shop-mobile-filter-btn"
+                    onClick={() => setShowMobileFilters(!showMobileFilters)}
+                    style={{
+                        display: 'none', // Will be shown via CSS on mobile
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '12px 20px',
+                        backgroundColor: 'white',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        fontWeight: '500',
+                        marginBottom: '16px',
+                        cursor: 'pointer',
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="4" y1="21" x2="4" y2="14" />
+                        <line x1="4" y1="10" x2="4" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12" y2="3" />
+                        <line x1="20" y1="21" x2="20" y2="16" />
+                        <line x1="20" y1="12" x2="20" y2="3" />
+                    </svg>
+                    Filters & Categories
+                </button>
+
+                <aside style={styles.sidebar} className={`shop-sidebar ${showMobileFilters ? 'active' : ''}`}>
+                    {/* Close button for mobile */}
+                    <div style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }} className="shop-sidebar-header">
+                        <span style={{ fontWeight: '600', fontSize: '18px' }}>Filters</span>
+                        <button onClick={() => setShowMobileFilters(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>&times;</button>
+                    </div>
                     <div style={styles.sidebarSection}>
                         <h3 style={styles.sidebarTitle}>Categories</h3>
                         <div style={styles.categoryList}>
@@ -324,7 +360,7 @@ const Shop = () => {
                         </select>
                     </div>
 
-                    <div style={styles.productsGrid}>
+                    <div style={styles.productsGrid} className="product-grid">
                         {isLoading ? (
                             <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px' }}>Loading products...</div>
                         ) : filteredProducts.length === 0 ? (

@@ -44,38 +44,43 @@ const SellerLogin = () => {
         page: {
             minHeight: '100vh',
             display: 'flex',
-            backgroundColor: '#F3F4F6'
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#F9FAFB',
+            fontFamily: "'Inter', sans-serif",
+            padding: '20px',
         },
         container: {
-            margin: 'auto',
             width: '100%',
-            maxWidth: '420px',
+            maxWidth: '400px',
             backgroundColor: 'white',
-            padding: '40px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            textAlign: 'center'
+            padding: '48px',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.05)',
+            textAlign: 'center',
+            border: '1px solid rgba(0,0,0,0.02)',
         },
         brand: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
+            display: 'inline-block',
             textDecoration: 'none',
             color: '#059669',
             marginBottom: '32px',
-            fontSize: '24px',
-            fontWeight: 'bold'
+            fontSize: '20px',
+            fontWeight: '700',
+            letterSpacing: '-0.5px',
         },
         title: {
-            fontSize: '24px',
-            fontWeight: '700',
+            fontSize: '28px',
+            fontWeight: '800',
             color: '#111827',
-            marginBottom: '8px'
+            marginBottom: '8px',
+            letterSpacing: '-0.5px',
         },
         subtitle: {
-            fontSize: '14px',
+            fontSize: '15px',
             color: '#6B7280',
-            marginBottom: '32px'
+            marginBottom: '40px',
+            lineHeight: '1.5',
         },
         formGroup: {
             marginBottom: '20px',
@@ -83,31 +88,43 @@ const SellerLogin = () => {
         },
         label: {
             display: 'block',
-            fontSize: '14px',
-            fontWeight: '500',
+            fontSize: '13px',
+            fontWeight: '600',
             color: '#374151',
-            marginBottom: '8px'
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
         },
         input: {
             width: '100%',
-            padding: '10px 14px',
-            border: '1px solid #D1D5DB',
-            borderRadius: '6px',
-            fontSize: '14px',
+            padding: '14px 16px',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            fontSize: '15px',
             outline: 'none',
-            transition: 'border-color 0.15s ease-in-out',
+            transition: 'all 0.2s ease',
+            backgroundColor: '#F9FAFB',
+            color: '#111827',
         },
         button: {
             width: '100%',
-            padding: '12px',
+            padding: '16px',
             backgroundColor: '#059669',
             color: 'white',
             border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
+            borderRadius: '12px',
+            fontSize: '15px',
             fontWeight: '600',
             cursor: 'pointer',
-            marginTop: '10px'
+            marginTop: '12px',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 6px -1px rgba(5, 150, 105, 0.2)',
+        },
+        link: {
+            color: '#059669',
+            fontWeight: '600',
+            textDecoration: 'none',
+            transition: 'color 0.2s',
         }
     };
 
@@ -115,12 +132,24 @@ const SellerLogin = () => {
         <div style={styles.page}>
             <div style={styles.container}>
                 <Link to="/" style={styles.brand}>
-                    Sanibare Hatiya Seller
+                    Sanibare Hatiya
                 </Link>
-                <h2 style={styles.title}>Seller Login</h2>
-                <p style={styles.subtitle}>Access your store dashboard</p>
+                <h2 style={styles.title}>Welcome Back</h2>
+                <p style={styles.subtitle}>Enter your credentials to access your seller dashboard.</p>
 
-                {error && <div style={{ color: 'red', marginBottom: '16px', fontSize: '14px' }}>{error}</div>}
+                {error && (
+                    <div style={{
+                        backgroundColor: '#FEF2F2',
+                        color: '#991B1B',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        marginBottom: '24px',
+                        border: '1px solid #FECACA'
+                    }}>
+                        {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <div style={styles.formGroup}>
@@ -131,8 +160,18 @@ const SellerLogin = () => {
                             value={formData.email}
                             onChange={handleChange}
                             style={styles.input}
-                            placeholder="you@company.com"
+                            placeholder="name@store.com"
                             required
+                            onFocus={(e) => {
+                                e.target.style.borderColor = '#059669';
+                                e.target.style.backgroundColor = 'white';
+                                e.target.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = '#E5E7EB';
+                                e.target.style.backgroundColor = '#F9FAFB';
+                                e.target.style.boxShadow = 'none';
+                            }}
                         />
                     </div>
                     <div style={styles.formGroup}>
@@ -145,20 +184,38 @@ const SellerLogin = () => {
                             style={styles.input}
                             placeholder="••••••••"
                             required
+                            onFocus={(e) => {
+                                e.target.style.borderColor = '#059669';
+                                e.target.style.backgroundColor = 'white';
+                                e.target.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.1)';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = '#E5E7EB';
+                                e.target.style.backgroundColor = '#F9FAFB';
+                                e.target.style.boxShadow = 'none';
+                            }}
                         />
                     </div>
 
-                    <button type="submit" style={styles.button} disabled={loading}>
+                    <button
+                        type="submit"
+                        style={styles.button}
+                        disabled={loading}
+                        onMouseOver={(e) => !loading && (e.target.style.transform = 'translateY(-1px)')}
+                        onMouseOut={(e) => !loading && (e.target.style.transform = 'translateY(0)')}
+                    >
                         {loading ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
 
-                <p style={{ marginTop: '24px', fontSize: '14px', color: '#6B7280' }}>
-                    Don't have a seller account? <Link to="/seller/signup" style={{ color: '#059669', fontWeight: '500' }}>Register</Link>
-                </p>
-                <p style={{ marginTop: '12px', fontSize: '13px', color: '#9CA3AF' }}>
-                    <Link to="/login" style={{ color: '#6B7280' }}>Login as Customer</Link>
-                </p>
+                <div style={{ marginTop: '32px', borderTop: '1px solid #F3F4F6', paddingTop: '24px' }}>
+                    <p style={{ fontSize: '14px', color: '#6B7280', margin: 0 }}>
+                        New to Sanibare? <Link to="/seller/signup" style={styles.link}>Join as a Seller</Link>
+                    </p>
+                    <p style={{ marginTop: '12px', fontSize: '14px', color: '#9CA3AF' }}>
+                        <Link to="/login" style={{ color: '#9CA3AF', textDecoration: 'none' }}>Customer Login</Link>
+                    </p>
+                </div>
             </div>
         </div>
     );
