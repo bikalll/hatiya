@@ -34,6 +34,9 @@ import SaturdayGuard from './components/SaturdayGuard';
 import Profile from './pages/Profile';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import SellerLogin from './pages/seller/SellerLogin';
+import SellerSignup from './pages/seller/SellerSignup';
+import SellerDashboard from './pages/seller/SellerDashboard';
 
 function App() {
   return (
@@ -44,6 +47,15 @@ function App() {
             {/* Admin Routes - Separate Layout */}
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+            {/* Seller Routes - Separate Layout or Main Layout? Let's use Main for now or a custom layout */}
+            <Route path="/seller/login" element={<SellerLogin />} />
+            <Route path="/seller/signup" element={<SellerSignup />} />
+            <Route path="/seller/dashboard" element={
+              <Layout>
+                <SellerDashboard />
+              </Layout>
+            } />
 
             {/* Public Routes - Main Layout */}
             <Route path="*" element={

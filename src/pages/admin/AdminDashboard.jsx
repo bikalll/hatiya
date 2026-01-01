@@ -16,6 +16,8 @@ const AdminDashboard = () => {
     const [orders, setOrders] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [editingId, setEditingId] = useState(null);
+    const [sellers, setSellers] = useState([]);
+    const [unverifiedProducts, setUnverifiedProducts] = useState([]);
 
 
 
@@ -61,8 +63,36 @@ const AdminDashboard = () => {
 
     const fetchData = async () => {
         setIsLoading(true);
-        await Promise.all([fetchProducts(), fetchCategories(), fetchFaqs(), fetchOrders(), fetchNotifications()]);
+        await Promise.all([fetchProducts(), fetchCategories(), fetchFaqs(), fetchOrders(), fetchNotifications(), fetchSellers(), fetchUnverifiedProducts()]);
         setIsLoading(false);
+    };
+
+    const fetchSellers = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .not('seller_status', 'is', null) // Only fetch users who applied
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setSellers(data || []);
+        } catch (error) {
+            console.error('Error fetching sellers:', error);
+        }
+    };
+
+    const fetchUnverifiedProducts = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*, profiles(store_name)')
+                .eq('is_verified', false)
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            setUnverifiedProducts(data || []);
+        } catch (error) {
+            console.error('Error fetching unverified products:', error);
+        }
     };
 
     const fetchNotifications = async () => {
@@ -359,6 +389,44 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleVerifySeller = async (sellerId, status) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ seller_status: status })
+                .eq('id', sellerId);
+
+            if (error) throw error;
+            alert(`Seller ${status} successfully!`);
+            fetchSellers();
+        } catch (error) {
+            alert('Error updating seller status: ' + error.message);
+        }
+    };
+
+    const handleVerifyProduct = async (productId, isVerified) => {
+        try {
+            if (isVerified) {
+                const { error } = await supabase
+                    .from('products')
+                    .update({ is_verified: true })
+                    .eq('id', productId);
+                if (error) throw error;
+                alert('Product verified!');
+            } else {
+                // Creating a 'reject' flow might basically be leaving it unverified or deleting it?
+                // For now, let's assume 'Reject' means deleting or marking as rejected (if we had a status column).
+                // The prompt asked for verification. We'll just verify for now.
+                // If we want to Reject, we might just leave it there or delete it.
+                // Let's add delete option in the UI instead of explicit 'reject' status for products to keep schema simple as requested.
+            }
+            fetchUnverifiedProducts();
+            fetchProducts(); // Update main list too
+        } catch (error) {
+            alert('Error verifying product: ' + error.message);
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this product?')) return;
 
@@ -574,6 +642,18 @@ const AdminDashboard = () => {
                 >
                     Notifications
                 </button>
+                <button
+                    style={{ ...styles.navItem, ...(view === 'sellers' ? styles.navItemActive : {}) }}
+                    onClick={() => setView('sellers')}
+                >
+                    Sellers
+                </button>
+                <button
+                    style={{ ...styles.navItem, ...(view === 'verify-products' ? styles.navItemActive : {}) }}
+                    onClick={() => setView('verify-products')}
+                >
+                    Verify Products {unverifiedProducts.length > 0 && `(${unverifiedProducts.length})`}
+                </button>
                 <div style={{ flex: 1 }}></div>
 
                 <button style={styles.navItem} onClick={handleSignOut}>
@@ -592,7 +672,10 @@ const AdminDashboard = () => {
                         {view === 'faqs' && 'FAQs'}
                         {view === 'add-faq' && (editingId ? 'Edit FAQ' : 'Add FAQ')}
                         {view === 'sales' && 'Sales Orders'}
+                        {view === 'sales' && 'Sales Orders'}
                         {view === 'notifications' && 'Send Notifications'}
+                        {view === 'sellers' && 'Manage Sellers'}
+                        {view === 'verify-products' && 'Verify Products'}
                     </h1>
                     {view === 'list' && (
                         <button style={styles.btnPrimary} onClick={() => {
@@ -627,457 +710,566 @@ const AdminDashboard = () => {
                 </div>
 
 
-                {/* PRODUCT LIST VIEW */}
-                {view === 'list' && (
-                    <div style={styles.tableContainer}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={styles.th}>Image</th>
-                                    <th style={styles.th}>Name</th>
-                                    <th style={styles.th}>Category</th>
-                                    <th style={styles.th}>Price</th>
-                                    <th style={styles.th}>Stock</th>
-                                    <th style={styles.th}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {products.length === 0 ? (
+
+
+                {/* SELLERS VIEW */}
+                {
+                    view === 'sellers' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
-                                            No products found. Add one!
-                                        </td>
+                                        <th style={styles.th}>Store Name</th>
+                                        <th style={styles.th}>Email</th>
+                                        <th style={styles.th}>Status</th>
+                                        <th style={styles.th}>Date</th>
+                                        <th style={styles.th}>Actions</th>
                                     </tr>
-                                ) : (
-                                    products.map(product => (
-                                        <tr key={product.id}>
-                                            <td style={styles.td}>
-                                                <img
-                                                    src={product.image_url}
-                                                    alt={product.name}
-                                                    style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
-                                                />
-                                            </td>
-                                            <td style={styles.td}>{product.name}</td>
-                                            <td style={styles.td}>
-                                                <span style={{ backgroundColor: '#ECFDF5', color: '#059669', padding: '2px 8px', borderRadius: '50px', fontSize: '12px' }}>
-                                                    {product.category}
-                                                </span>
-                                            </td>
-                                            <td style={styles.td}>${product.price}</td>
-                                            <td style={styles.td}>{product.stock_quantity}</td>
-                                            <td style={styles.td}>
-                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditProduct(product)}>Edit</button>
-                                                <button style={styles.btnDanger} onClick={() => handleDelete(product.id)}>Delete</button>
+                                </thead>
+                                <tbody>
+                                    {sellers.length === 0 ? (
+                                        <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center' }}>No seller applications found.</td></tr>
+                                    ) : (
+                                        sellers.map(seller => (
+                                            <tr key={seller.id}>
+                                                <td style={styles.td}>{seller.store_name}</td>
+                                                <td style={styles.td}>{seller.email}</td>
+                                                <td style={styles.td}>
+                                                    <span style={{
+                                                        padding: '2px 8px', borderRadius: '12px', fontSize: '12px',
+                                                        backgroundColor: seller.seller_status === 'approved' ? '#D1FAE5' : seller.seller_status === 'rejected' ? '#FEE2E2' : '#FEF3C7',
+                                                        color: seller.seller_status === 'approved' ? '#065F46' : seller.seller_status === 'rejected' ? '#991B1B' : '#92400E'
+                                                    }}>
+                                                        {seller.seller_status.toUpperCase()}
+                                                    </span>
+                                                </td>
+                                                <td style={styles.td}>{new Date(seller.created_at).toLocaleDateString()}</td>
+                                                <td style={styles.td}>
+                                                    {seller.seller_status === 'pending' && (
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <button onClick={() => handleVerifySeller(seller.id, 'approved')} style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px' }}>Approve</button>
+                                                            <button onClick={() => handleVerifySeller(seller.id, 'rejected')} style={{ ...styles.btnDanger, padding: '6px 12px', fontSize: '12px' }}>Reject</button>
+                                                        </div>
+                                                    )}
+                                                    {seller.seller_status !== 'pending' && <span style={{ color: '#9CA3AF', fontSize: '12px' }}>Processed</span>}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
+
+                {/* VERIFY PRODUCTS VIEW */}
+                {
+                    view === 'verify-products' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th style={styles.th}>Image</th>
+                                        <th style={styles.th}>Name</th>
+                                        <th style={styles.th}>Store</th>
+                                        <th style={styles.th}>Price</th>
+                                        <th style={styles.th}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {unverifiedProducts.length === 0 ? (
+                                        <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center' }}>No products pending verification.</td></tr>
+                                    ) : (
+                                        unverifiedProducts.map(product => (
+                                            <tr key={product.id}>
+                                                <td style={styles.td}>
+                                                    <img src={product.image_url} alt={product.name} style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
+                                                </td>
+                                                <td style={styles.td}>{product.name}</td>
+                                                <td style={styles.td}>{product.profiles?.store_name || 'N/A'}</td>
+                                                <td style={styles.td}>${product.price}</td>
+                                                <td style={styles.td}>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <button onClick={() => handleVerifyProduct(product.id, true)} style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px' }}>Verify</button>
+                                                        <button onClick={() => handleDelete(product.id)} style={{ ...styles.btnDanger, padding: '6px 12px', fontSize: '12px' }}>Delete</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
+
+                {/* PRODUCT LIST VIEW */}
+                {
+                    view === 'list' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th style={styles.th}>Image</th>
+                                        <th style={styles.th}>Name</th>
+                                        <th style={styles.th}>Category</th>
+                                        <th style={styles.th}>Price</th>
+                                        <th style={styles.th}>Stock</th>
+                                        <th style={styles.th}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {products.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                                No products found. Add one!
                                             </td>
                                         </tr>
+                                    ) : (
+                                        products.map(product => (
+                                            <tr key={product.id}>
+                                                <td style={styles.td}>
+                                                    <img
+                                                        src={product.image_url}
+                                                        alt={product.name}
+                                                        style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
+                                                    />
+                                                </td>
+                                                <td style={styles.td}>{product.name}</td>
+                                                <td style={styles.td}>
+                                                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', padding: '2px 8px', borderRadius: '50px', fontSize: '12px' }}>
+                                                        {product.category}
+                                                    </span>
+                                                </td>
+                                                <td style={styles.td}>${product.price}</td>
+                                                <td style={styles.td}>{product.stock_quantity}</td>
+                                                <td style={styles.td}>
+                                                    <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditProduct(product)}>Edit</button>
+                                                    <button style={styles.btnDanger} onClick={() => handleDelete(product.id)}>Delete</button>
+                                                </td>
+                                            </tr>
 
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
 
                 {/* ADD PRODUCT FORM */}
-                {view === 'add' && (
-                    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
-                        <form onSubmit={handleSubmit}>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Product Name</label>
-                                <input
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    style={styles.input}
-                                    required
-                                />
-                            </div>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Category</label>
-                                <select
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleInputChange}
-                                    style={styles.input}
-                                >
-                                    <option value="" disabled>Select Category</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div style={{ display: 'flex', gap: '20px' }}>
-                                <div style={{ ...styles.formGroup, flex: 1 }}>
-                                    <label style={styles.label}>Price</label>
+                {
+                    view === 'add' && (
+                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
+                            <form onSubmit={handleSubmit}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Product Name</label>
                                     <input
-                                        type="number"
-                                        name="price"
-                                        value={formData.price}
+                                        name="name"
+                                        value={formData.name}
                                         onChange={handleInputChange}
                                         style={styles.input}
                                         required
                                     />
                                 </div>
-                                <div style={{ ...styles.formGroup, flex: 1 }}>
-                                    <label style={styles.label}>Stock</label>
-                                    <input
-                                        type="number"
-                                        name="stock_quantity"
-                                        value={formData.stock_quantity}
-                                        onChange={handleInputChange}
-                                        style={styles.input}
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>SKU (Stock Keeping Unit)</label>
-                                <input
-                                    name="sku"
-                                    value={formData.sku}
-                                    onChange={handleInputChange}
-                                    style={styles.input}
-                                    placeholder="e.g., SANI-001"
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '20px' }}>
-                                <div style={{ ...styles.formGroup, flex: 1 }}>
-                                    <label style={styles.label}>Material</label>
-                                    <input
-                                        name="material"
-                                        value={formData.material}
-                                        onChange={handleInputChange}
-                                        style={styles.input}
-                                        placeholder="e.g., 100% Wool"
-                                    />
-                                </div>
-                                <div style={{ ...styles.formGroup, flex: 1 }}>
-                                    <label style={styles.label}>Dimensions</label>
-                                    <input
-                                        name="dimensions"
-                                        value={formData.dimensions}
-                                        onChange={handleInputChange}
-                                        style={styles.input}
-                                        placeholder="e.g., 10x15 cm"
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Product Image</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    style={styles.input}
-                                    required
-                                />
-                            </div>
-
-                            <div style={styles.formGroup}>
-                                <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        name="is_featured"
-                                        checked={formData.is_featured}
-                                        onChange={handleInputChange}
-                                        style={{ width: '16px', height: '16px' }}
-                                    />
-                                    Feature this product (Show on Home Page)
-                                </label>
-                            </div>
-
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Description</label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    style={styles.textarea}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button type="button" onClick={() => setView('list')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" style={styles.btnPrimary} disabled={isUploading}>
-                                    {isUploading ? 'Uploading...' : 'Save Product'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
-
-                {/* NOTIFICATIONS VIEW */}
-                {view === 'notifications' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
-                            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Send New Notification</h3>
-                            <form onSubmit={handleSendNotification}>
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>Title</label>
-                                    <input
-                                        name="title"
-                                        value={notificationForm.title}
-                                        onChange={handleNotificationChange}
-                                        style={styles.input}
-                                        required
-                                        placeholder="e.g. Shop Opening Soon!"
-                                    />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Message</label>
-                                    <textarea
-                                        name="message"
-                                        value={notificationForm.message}
-                                        onChange={handleNotificationChange}
-                                        style={styles.textarea}
-                                        required
-                                        placeholder="Write your message here..."
-                                    />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Type</label>
+                                    <label style={styles.label}>Category</label>
                                     <select
-                                        name="type"
-                                        value={notificationForm.type}
-                                        onChange={handleNotificationChange}
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
                                         style={styles.input}
                                     >
-                                        <option value="general">General</option>
-                                        <option value="payment">Payment Reminder</option>
-                                        <option value="opening">Shop Opening</option>
+                                        <option value="" disabled>Select Category</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                        ))}
                                     </select>
                                 </div>
+                                <div style={{ display: 'flex', gap: '20px' }}>
+                                    <div style={{ ...styles.formGroup, flex: 1 }}>
+                                        <label style={styles.label}>Price</label>
+                                        <input
+                                            type="number"
+                                            name="price"
+                                            value={formData.price}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                            required
+                                        />
+                                    </div>
+                                    <div style={{ ...styles.formGroup, flex: 1 }}>
+                                        <label style={styles.label}>Stock</label>
+                                        <input
+                                            type="number"
+                                            name="stock_quantity"
+                                            value={formData.stock_quantity}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div style={styles.formGroup}>
-                                    <label style={styles.label}>User ID (Optional - leave empty for all)</label>
+                                    <label style={styles.label}>SKU (Stock Keeping Unit)</label>
                                     <input
-                                        name="user_id"
-                                        value={notificationForm.user_id}
-                                        onChange={handleNotificationChange}
+                                        name="sku"
+                                        value={formData.sku}
+                                        onChange={handleInputChange}
                                         style={styles.input}
-                                        placeholder="Specific User UUID"
+                                        placeholder="e.g., SANI-001"
                                     />
                                 </div>
-                                <button type="submit" style={styles.btnPrimary}>
-                                    Send Notification
-                                </button>
+
+                                <div style={{ display: 'flex', gap: '20px' }}>
+                                    <div style={{ ...styles.formGroup, flex: 1 }}>
+                                        <label style={styles.label}>Material</label>
+                                        <input
+                                            name="material"
+                                            value={formData.material}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                            placeholder="e.g., 100% Wool"
+                                        />
+                                    </div>
+                                    <div style={{ ...styles.formGroup, flex: 1 }}>
+                                        <label style={styles.label}>Dimensions</label>
+                                        <input
+                                            name="dimensions"
+                                            value={formData.dimensions}
+                                            onChange={handleInputChange}
+                                            style={styles.input}
+                                            placeholder="e.g., 10x15 cm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Product Image</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        style={styles.input}
+                                        required
+                                    />
+                                </div>
+
+                                <div style={styles.formGroup}>
+                                    <label style={{ ...styles.label, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            name="is_featured"
+                                            checked={formData.is_featured}
+                                            onChange={handleInputChange}
+                                            style={{ width: '16px', height: '16px' }}
+                                        />
+                                        Feature this product (Show on Home Page)
+                                    </label>
+                                </div>
+
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Description</label>
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleInputChange}
+                                        style={styles.textarea}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button type="button" onClick={() => setView('list')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" style={styles.btnPrimary} disabled={isUploading}>
+                                        {isUploading ? 'Uploading...' : 'Save Product'}
+                                    </button>
+                                </div>
                             </form>
                         </div>
+                    )
+                }
 
-                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
-                            <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Recent Notifications</h3>
-                            <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                                {notifications.length === 0 ? (
-                                    <p style={{ color: '#6B7280' }}>No notifications sent yet.</p>
-                                ) : (
-                                    notifications.map(n => (
-                                        <div key={n.id} style={{ borderBottom: '1px solid #E5E7EB', padding: '12px 0' }}>
-                                            <div style={{ fontWeight: '600', fontSize: '14px' }}>{n.title}</div>
-                                            <div style={{ fontSize: '13px', color: '#374151', margin: '4px 0' }}>{n.message}</div>
-                                            <div style={{ fontSize: '11px', color: '#9CA3AF', display: 'flex', justifyContent: 'space-between' }}>
-                                                <span>{n.type.toUpperCase()}</span>
-                                                <span>{n.user_id ? 'Individual' : 'Broadcast'} • {new Date(n.created_at).toLocaleDateString()}</span>
+                {/* NOTIFICATIONS VIEW */}
+                {
+                    view === 'notifications' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                            <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
+                                <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Send New Notification</h3>
+                                <form onSubmit={handleSendNotification}>
+                                    <div style={styles.formGroup}>
+                                        <label style={styles.label}>Title</label>
+                                        <input
+                                            name="title"
+                                            value={notificationForm.title}
+                                            onChange={handleNotificationChange}
+                                            style={styles.input}
+                                            required
+                                            placeholder="e.g. Shop Opening Soon!"
+                                        />
+                                    </div>
+                                    <div style={styles.formGroup}>
+                                        <label style={styles.label}>Message</label>
+                                        <textarea
+                                            name="message"
+                                            value={notificationForm.message}
+                                            onChange={handleNotificationChange}
+                                            style={styles.textarea}
+                                            required
+                                            placeholder="Write your message here..."
+                                        />
+                                    </div>
+                                    <div style={styles.formGroup}>
+                                        <label style={styles.label}>Type</label>
+                                        <select
+                                            name="type"
+                                            value={notificationForm.type}
+                                            onChange={handleNotificationChange}
+                                            style={styles.input}
+                                        >
+                                            <option value="general">General</option>
+                                            <option value="payment">Payment Reminder</option>
+                                            <option value="opening">Shop Opening</option>
+                                        </select>
+                                    </div>
+                                    <div style={styles.formGroup}>
+                                        <label style={styles.label}>User ID (Optional - leave empty for all)</label>
+                                        <input
+                                            name="user_id"
+                                            value={notificationForm.user_id}
+                                            onChange={handleNotificationChange}
+                                            style={styles.input}
+                                            placeholder="Specific User UUID"
+                                        />
+                                    </div>
+                                    <button type="submit" style={styles.btnPrimary}>
+                                        Send Notification
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px' }}>
+                                <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Recent Notifications</h3>
+                                <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                    {notifications.length === 0 ? (
+                                        <p style={{ color: '#6B7280' }}>No notifications sent yet.</p>
+                                    ) : (
+                                        notifications.map(n => (
+                                            <div key={n.id} style={{ borderBottom: '1px solid #E5E7EB', padding: '12px 0' }}>
+                                                <div style={{ fontWeight: '600', fontSize: '14px' }}>{n.title}</div>
+                                                <div style={{ fontSize: '13px', color: '#374151', margin: '4px 0' }}>{n.message}</div>
+                                                <div style={{ fontSize: '11px', color: '#9CA3AF', display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>{n.type.toUpperCase()}</span>
+                                                    <span>{n.user_id ? 'Individual' : 'Broadcast'} • {new Date(n.created_at).toLocaleDateString()}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))
-                                )}
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* CATEGORIES LIST VIEW */}
-                {view === 'categories' && (
-                    <div style={styles.tableContainer}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={styles.th}>Name</th>
-                                    <th style={styles.th}>Description</th>
-                                    <th style={styles.th}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categories.length === 0 ? (
+                {
+                    view === 'categories' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan="3" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
-                                            No categories found.
-                                        </td>
+                                        <th style={styles.th}>Name</th>
+                                        <th style={styles.th}>Description</th>
+                                        <th style={styles.th}>Actions</th>
                                     </tr>
-                                ) : (
-                                    categories.map(cat => (
-                                        <tr key={cat.id}>
-                                            <td style={styles.td}><strong>{cat.name}</strong></td>
-                                            <td style={styles.td}>{cat.description || '-'}</td>
-                                            <td style={styles.td}>
-                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditCategory(cat)}>Edit</button>
-                                                <button style={styles.btnDanger} onClick={() => handleDeleteCategory(cat.id)}>Delete</button>
+                                </thead>
+                                <tbody>
+                                    {categories.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                                No categories found.
                                             </td>
                                         </tr>
+                                    ) : (
+                                        categories.map(cat => (
+                                            <tr key={cat.id}>
+                                                <td style={styles.td}><strong>{cat.name}</strong></td>
+                                                <td style={styles.td}>{cat.description || '-'}</td>
+                                                <td style={styles.td}>
+                                                    <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditCategory(cat)}>Edit</button>
+                                                    <button style={styles.btnDanger} onClick={() => handleDeleteCategory(cat.id)}>Delete</button>
+                                                </td>
+                                            </tr>
 
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
 
                 {/* ADD CATEGORY FORM */}
-                {view === 'add-category' && (
-                    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
-                        <form onSubmit={handleSubmitCategory}>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Category Name</label>
-                                <input
-                                    name="name"
-                                    value={categoryForm.name}
-                                    onChange={handleCategoryChange}
-                                    style={styles.input}
-                                    required
-                                />
-                            </div>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Description (Optional)</label>
-                                <textarea
-                                    name="description"
-                                    value={categoryForm.description}
-                                    onChange={handleCategoryChange}
-                                    style={styles.textarea}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button type="button" onClick={() => setView('categories')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" style={styles.btnPrimary}>
-                                    Save Category
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
+                {
+                    view === 'add-category' && (
+                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
+                            <form onSubmit={handleSubmitCategory}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Category Name</label>
+                                    <input
+                                        name="name"
+                                        value={categoryForm.name}
+                                        onChange={handleCategoryChange}
+                                        style={styles.input}
+                                        required
+                                    />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Description (Optional)</label>
+                                    <textarea
+                                        name="description"
+                                        value={categoryForm.description}
+                                        onChange={handleCategoryChange}
+                                        style={styles.textarea}
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button type="button" onClick={() => setView('categories')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" style={styles.btnPrimary}>
+                                        Save Category
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )
+                }
 
                 {/* FAQ LIST VIEW */}
-                {view === 'faqs' && (
-                    <div style={styles.tableContainer}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={styles.th}>Question</th>
-                                    <th style={styles.th}>Answer</th>
-                                    <th style={styles.th}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {faqs.length === 0 ? (
+                {
+                    view === 'faqs' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan="3" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
-                                            No FAQs found.
-                                        </td>
+                                        <th style={styles.th}>Question</th>
+                                        <th style={styles.th}>Answer</th>
+                                        <th style={styles.th}>Actions</th>
                                     </tr>
-                                ) : (
-                                    faqs.map(faq => (
-                                        <tr key={faq.id}>
-                                            <td style={{ ...styles.td, width: '30%' }}><strong>{faq.question}</strong></td>
-                                            <td style={styles.td}>{faq.answer}</td>
-                                            <td style={styles.td}>
-                                                <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditFaq(faq)}>Edit</button>
-                                                <button style={styles.btnDanger} onClick={() => handleDeleteFaq(faq.id)}>Delete</button>
+                                </thead>
+                                <tbody>
+                                    {faqs.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                                No FAQs found.
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                    ) : (
+                                        faqs.map(faq => (
+                                            <tr key={faq.id}>
+                                                <td style={{ ...styles.td, width: '30%' }}><strong>{faq.question}</strong></td>
+                                                <td style={styles.td}>{faq.answer}</td>
+                                                <td style={styles.td}>
+                                                    <button style={{ ...styles.btnPrimary, padding: '6px 12px', fontSize: '12px', marginRight: '8px' }} onClick={() => handleEditFaq(faq)}>Edit</button>
+                                                    <button style={styles.btnDanger} onClick={() => handleDeleteFaq(faq.id)}>Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
 
                 {/* ADD FAQ FORM */}
-                {view === 'add-faq' && (
-                    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
-                        <form onSubmit={handleSubmitFaq}>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Question</label>
-                                <input
-                                    name="question"
-                                    value={faqForm.question}
-                                    onChange={handleFaqChange}
-                                    style={styles.input}
-                                    required
-                                />
-                            </div>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Answer</label>
-                                <textarea
-                                    name="answer"
-                                    value={faqForm.answer}
-                                    onChange={handleFaqChange}
-                                    style={styles.textarea}
-                                    required
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button type="button" onClick={() => setView('faqs')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" style={styles.btnPrimary}>
-                                    Save FAQ
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
+                {
+                    view === 'add-faq' && (
+                        <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '8px', maxWidth: '600px' }}>
+                            <form onSubmit={handleSubmitFaq}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Question</label>
+                                    <input
+                                        name="question"
+                                        value={faqForm.question}
+                                        onChange={handleFaqChange}
+                                        style={styles.input}
+                                        required
+                                    />
+                                </div>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Answer</label>
+                                    <textarea
+                                        name="answer"
+                                        value={faqForm.answer}
+                                        onChange={handleFaqChange}
+                                        style={styles.textarea}
+                                        required
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button type="button" onClick={() => setView('faqs')} style={{ ...styles.btnPrimary, backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB' }}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" style={styles.btnPrimary}>
+                                        Save FAQ
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )
+                }
 
 
                 {/* SALES LIST VIEW */}
-                {view === 'sales' && (
-                    <div style={styles.tableContainer}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={styles.th}>Date</th>
-                                    <th style={styles.th}>Order ID</th>
-                                    <th style={styles.th}>Customer</th>
-                                    <th style={styles.th}>Total</th>
-                                    <th style={styles.th}>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orders.length === 0 ? (
+                {
+                    view === 'sales' && (
+                        <div style={styles.tableContainer}>
+                            <table style={styles.table}>
+                                <thead>
                                     <tr>
-                                        <td colSpan="5" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
-                                            No sales yet.
-                                        </td>
+                                        <th style={styles.th}>Date</th>
+                                        <th style={styles.th}>Order ID</th>
+                                        <th style={styles.th}>Customer</th>
+                                        <th style={styles.th}>Total</th>
+                                        <th style={styles.th}>Status</th>
                                     </tr>
-                                ) : (
-                                    orders.map(order => (
-                                        <tr key={order.id}>
-                                            <td style={styles.td}>{new Date(order.created_at).toLocaleDateString()}</td>
-                                            <td style={styles.td}>{order.id.slice(0, 8)}</td>
-                                            <td style={styles.td}>{order.customer_name}</td>
-                                            <td style={styles.td}>NPR {order.total_amount}</td>
-                                            <td style={styles.td}>
-                                                <span style={{
-                                                    backgroundColor: order.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
-                                                    color: order.status === 'completed' ? '#059669' : '#D97706',
-                                                    padding: '2px 8px', borderRadius: '50px', fontSize: '12px'
-                                                }}>
-                                                    {order.status}
-                                                </span>
+                                </thead>
+                                <tbody>
+                                    {orders.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>
+                                                No sales yet.
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                    ) : (
+                                        orders.map(order => (
+                                            <tr key={order.id}>
+                                                <td style={styles.td}>{new Date(order.created_at).toLocaleDateString()}</td>
+                                                <td style={styles.td}>{order.id.slice(0, 8)}</td>
+                                                <td style={styles.td}>{order.customer_name}</td>
+                                                <td style={styles.td}>NPR {order.total_amount}</td>
+                                                <td style={styles.td}>
+                                                    <span style={{
+                                                        backgroundColor: order.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
+                                                        color: order.status === 'completed' ? '#059669' : '#D97706',
+                                                        padding: '2px 8px', borderRadius: '50px', fontSize: '12px'
+                                                    }}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                }
 
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

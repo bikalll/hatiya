@@ -144,6 +144,9 @@ const ProductModal = ({ product, isOpen, onClose, onAddToCart }) => {
 
                     <div style={{ flex: '1 1 400px', padding: '40px' }}>
                         <div style={styles.category}>{product.category}</div>
+                        <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>
+                            Sold by: <span style={{ fontWeight: '500', color: '#059669' }}>{product.profiles?.store_name || 'Sanibare Hatiya'}</span>
+                        </div>
                         <h2 style={styles.name}>{product.name}</h2>
                         <div style={styles.price}>NPR {product.price}</div>
 

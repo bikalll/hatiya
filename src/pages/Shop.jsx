@@ -28,7 +28,9 @@ const Shop = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            const { data: productData } = await supabase.from('products').select('*');
+            const { data: productData } = await supabase
+                .from('products')
+                .select('*, profiles(store_name)');
             const { data: categoryData } = await supabase.from('categories').select('*').order('name');
 
             if (productData) setProducts(productData);
@@ -215,6 +217,12 @@ const Shop = () => {
             letterSpacing: '0.5px',
             marginBottom: '4px',
         },
+        productVendor: {
+            fontSize: '11px',
+            color: '#6B7280',
+            fontWeight: '400',
+            marginBottom: '4px',
+        },
         productName: {
             fontSize: '15px',
             fontWeight: '500',
@@ -336,6 +344,7 @@ const Shop = () => {
                                     </div>
                                     <div style={styles.productInfo}>
                                         <div style={styles.productCategory}>{product.category}</div>
+                                        <div style={styles.productVendor}>By {product.profiles?.store_name || 'Sanibare Hatiya'}</div>
                                         <div style={styles.productName}>{product.name}</div>
                                         <div style={styles.productPriceRow}>
                                             <div>

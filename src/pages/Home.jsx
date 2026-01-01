@@ -20,7 +20,7 @@ const Home = () => {
         const fetchFeatured = async () => {
             const { data, error } = await supabase
                 .from('products')
-                .select('*')
+                .select('*, profiles(store_name)')
                 .eq('is_featured', true)
                 .limit(4);
 
@@ -248,6 +248,12 @@ const Home = () => {
             textTransform: 'uppercase',
             letterSpacing: '1px',
             marginBottom: '8px',
+        },
+        productVendor: {
+            fontSize: '12px',
+            color: '#9CA3AF',
+            marginBottom: '4px',
+            fontStyle: 'italic'
         },
         productName: {
             fontSize: '18px',
@@ -485,6 +491,7 @@ const Home = () => {
                                     </div>
                                     <div style={styles.productInfo}>
                                         <div style={styles.productCategory}>{product.category}</div>
+                                        <div style={styles.productVendor}>By {product.profiles?.store_name || 'Sanibare Hatiya'}</div>
                                         <div style={styles.productName}>{product.name}</div>
                                         <div style={styles.productPrice}>${product.price}</div>
                                     </div>
